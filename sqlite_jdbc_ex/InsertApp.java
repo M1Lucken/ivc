@@ -56,8 +56,8 @@ public class InsertApp {
     	InsertApp app = new InsertApp();
         // insert three new rows
         app.insert(1948392,"Kayla Fletcher", "PSTAT");
-        app.insert(6390285,"Anton McDude", "COMM");
-        app.insert(6936635,"Maxim Rusky", "ECON");
+        //app.insert(6390285,"Anton McDude", "COMM");
+        //app.insert(6936635,"Maxim Rusky", "ECON");
     }
 
 }

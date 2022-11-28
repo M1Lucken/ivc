@@ -9,7 +9,7 @@ import java.sql.SQLException;
  *
  * @author sqlitetutorial.net
  */
-public class DeleteApp {
+public class UpdateApp {
 
     /**
      * Connect to the test.db database
@@ -34,15 +34,20 @@ public class DeleteApp {
      * @param name
      * @param capacity
      */
-    public void delete(int perm) {
-        String sql = "DELETE FROM students WHERE perm = ?";
+    public void update(int perm, String name, String major) {
+        String sql = "UPDATE students SET name = ?,"
+        		+ "major = ?"
+        		+ "WHERE perm = ?";
 
         try (Connection conn = this.connect();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        	
         	pstmt.setInt(1, perm);
-        	//pstmt.setString(2, name);
-            //pstmt.setString(3, major);
+        	pstmt.setString(2, name);
+            pstmt.setString(3, major);
+            
             pstmt.executeUpdate();
+        
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -53,10 +58,10 @@ public class DeleteApp {
      */
     public static void main(String[] args) {
 
-    	DeleteApp app = new DeleteApp();
-        // delete x row with matching perm
-    	//note: removes ALL rows with matching perm
-        app.delete(1948392);
+    	UpdateApp app = new UpdateApp();
+        // update one row
+        app.update(1948392,"Kayla Fletchher", "BIOPSYCH");
+      
     }
 
 }
