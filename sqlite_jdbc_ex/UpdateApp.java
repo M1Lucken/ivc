@@ -60,7 +60,7 @@ public class UpdateApp {
 
     	UpdateApp app = new UpdateApp();
         // update one row
-        app.update(1948392,"Kayla Fletchher", "BIOPSYCH");
+        app.update(1948392,"Maria Fletcher", "PSYCH");
       
     }
 

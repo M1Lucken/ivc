@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.PreparedStatement;
 
 /**
  *
@@ -54,9 +55,40 @@ public class SelectApp {
     /**
      * @param args the command line arguments
      */
+    public void getPermGreaterThan(int perm){
+               String sql = "SELECT perm, name, major "
+                          + "FROM students WHERE perm > ?";
+        
+        try (Connection conn = this.connect();
+             
+        		PreparedStatement pstmt  = conn.prepareStatement(sql)){
+            
+            // set the value
+            pstmt.setInt(1,perm);
+            //
+            ResultSet rs  = pstmt.executeQuery();
+            
+            // loop through the result set
+            while (rs.next()) {
+                System.out.println(rs.getInt("perm") +  "\t" + 
+                                   rs.getString("name") + "\t" +
+                                   rs.getString("major"));
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+    
     public static void main(String[] args) {
-        SelectApp app = new SelectApp();
+    	System.out.println("Select ALL tuples in students \t");
+    	
+    	SelectApp app = new SelectApp();
         app.selectAll();
+        
+        System.out.println("Select all perms greater than 1948392 \t");
+        
+        SelectApp app2 = new SelectApp();
+        app2.getPermGreaterThan(1948392);
     }
 
 }
