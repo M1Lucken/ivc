@@ -690,7 +690,8 @@ public class MainApp {
     					System.out.print("\nEnter enroll code for course: ");
     					String enrollcode = System.console().readLine();
     					System.out.print("\nEnter perm number of student to add: ");
-    			
+    					String sPerm = System.console().readLine();
+    					app.addCourse(sPerm, enrollcode);
     					break;
     				case 2:
     					System.out.print("\nEnter enroll code for course: ");
