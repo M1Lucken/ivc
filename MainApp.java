@@ -295,6 +295,22 @@ public class MainApp {
     	
     }
     
+    public void listAllCourses(String perm) {
+    	String sql = "SELECT taken FROM students WHERE perm = ?";
+    	try (Connection conn = this.connect();
+                
+        		PreparedStatement pstmt  = conn.prepareStatement(sql)){            
+            // set the value
+            pstmt.setString(1,perm);           
+            ResultSet rs  = pstmt.executeQuery();
+            System.out.println(rs.getString("taken") + "\n");
+    	} catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    	
+    }
+    
+    
     public void generateCourseListing(String permNumber){
         String sql = "SELECT taken FROM students WHERE perm = " + permNumber;
         String taken_courses = "";
@@ -679,7 +695,7 @@ public class MainApp {
     				System.out.print("Starting Registrar... \n\n");
     				   				
     				System.out.print("\nOPERATIONS\n");
-    				System.out.print("0 | Exit Registrar \n1 | Add student to course \n2 | Drop student from course \n3 | List current student courses \n4 | List student grades from "
+    				System.out.print("0 | Exit Registrar \n1 | Add student to course \n2 | Drop student from course \n3 | List all courses a student has taken\n4 | List student grades from "
     						+ "previous quarter\n5 | Generate class list\n6 | Enter course grades\n7 | Print student transcript\n8 | Generate grade mailer for all students\n");
     				System.out.print("Choose the operation desired by entering its corresponding number from the above list: ");
     				int choice2 = Integer.valueOf(System.console().readLine());
@@ -702,7 +718,8 @@ public class MainApp {
     					break;
     				case 3:
     					System.out.print("\nEnter perm number of student to list courses taken: ");
-    					    					
+    					sPerm = System.console().readLine();
+    					app.listAllCourses(sPerm);
     					break;
     				case 4:
     					System.out.print("\nEnter perm number of student to list grades of previous quarter: ");
