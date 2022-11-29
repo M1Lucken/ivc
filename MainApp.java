@@ -295,6 +295,96 @@ public class MainApp {
     	
     }
     
+    public void dropCourse(String permNumber, String enrollCode){
+
+        String sql = "SELECT taken FROM students WHERE perm = " + permNumber;
+        // Look up the taken courses field. Count the number of courses that are being taken in Fall 2022. Ensure that at least 2
+        // courses like that exist for this student. 
+        // Then, update the student info in the students field by remove the correct course info from the taken field.
+
+        String taken_courses = "";
+
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql)){
+              
+                while(rs.next()) { // Note there will only be one result
+                    String s = rs.getString("taken");
+                    taken_courses = s.replace("\"", ""); // Remove the quotes
+                }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        String[] Courses = taken_courses.split(" ");
+        
+        int counter = 0;
+        for(int i = 0; i < Courses.length; i++){
+            if(Courses[i].equals("IP")){
+                counter++;
+            }
+        }
+        
+        boolean current = false;
+        String tester = enrollCode + ":";
+        if(counter >= 2){
+            int start = -1;
+            int end = -1;
+            int lastValidIndex = -1;
+            for(int i = 0; i < Courses.length; i++){
+                if(Courses[i].equals(tester)){
+                    if(i != 0 && Courses[i-1].substring(Courses[i-1].length()-1).equals(":")){
+                            // If the string before this ends in a colon then I know for a fact that it is the Year and Quarter information
+                            // for this course. If not, then it's the grade of the previous course.
+                            start = i-2;
+                    }
+                    else{
+                            start = i;
+                    }
+                    end = i + 1;
+                    if(Courses[i+1].equals("IP")){
+                        current = true;
+                    }
+                }
+            }
+
+            lastValidIndex = Courses.length - 1;
+            if(end == Courses.length - 1){
+                lastValidIndex = start - 1;
+            }
+
+            if(current){ // This course is a course that is being taken currently.
+                String str = "\"";
+                for(int i = 0; i < Courses.length; i++){
+                    if(i < start || i > end){
+                        str += Courses[i];
+                        if(Courses[i].length() <= 3 && i < lastValidIndex){ // This is the grade of the course and the next course starts after this
+                            str += ", ";
+                        }
+                        else if (i < lastValidIndex){
+                            str += " ";
+                        }
+                        else{}
+                    }
+                }
+                str += "\"";
+
+                String sql2 = "UPDATE students SET taken = ?" + "WHERE perm = ?";
+                try (Connection conn = this.connect();
+                    PreparedStatement pstmt = conn.prepareStatement(sql2)){
+                    pstmt.setString(1, str);
+                    pstmt.setString(2, permNumber);
+                    
+                    pstmt.executeUpdate();
+
+                } catch (SQLException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        }
+    }
+    
     public boolean verifyPin(String perm, String upin) {
     	String pinno = null;
     	//get pin from student, get pin from db, compare
@@ -487,7 +577,8 @@ public class MainApp {
     					break;
     				case 2:
     					System.out.print("\nEnter enrollment code for course to drop: ");
-    					
+    					enrollcode = System.console().readLine();
+    					app.dropCourse(perm, enrollcode);
     					break;
     				case 3:
     					System.out.print("\nList current course");
