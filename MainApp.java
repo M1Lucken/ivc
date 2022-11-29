@@ -694,9 +694,11 @@ public class MainApp {
     					app.addCourse(sPerm, enrollcode);
     					break;
     				case 2:
-    					System.out.print("\nEnter enroll code for course: ");
+    					System.out.print("\nEnter course number for class: ");
+    					enrollcode = System.console().readLine();
     					System.out.print("\nEnter perm number of student to drop: ");
-    			
+    					sPerm = System.console().readLine();
+    					app.dropCourse(sPerm, enrollcode);
     					break;
     				case 3:
     					System.out.print("\nEnter perm number of student to list courses taken: ");
@@ -716,8 +718,7 @@ public class MainApp {
     					
     					break;
     				case 7:
-    					System.out.print("\nEnter perm number of student to print transcript for: ");
-    					
+    					System.out.print("\nEnter perm number of student to print transcript for: ");    					
     					break;
     				case 8:
     					System.out.print("\nEmail everyone their grades!");
