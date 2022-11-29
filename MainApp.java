@@ -295,11 +295,53 @@ public class MainApp {
     	
     }
     
+    public void generateCourseListing(String permNumber){
+        String sql = "SELECT taken FROM students WHERE perm = " + permNumber;
+        String taken_courses = "";
+        String[] Courses = null;
+
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql)){
+             
+                while(rs.next()) { // Note there will only be one result
+                    String s = rs.getString("taken");
+                    taken_courses = s.replace("\"", ""); // Remove the quotes
+                    Courses = taken_courses.split(", ");
+                }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        int counter = 0;
+        for(int i = 0; i < Courses.length; i++){
+            if(Courses[i].contains(": IP")){
+                counter++;
+            }
+        }
+
+        int counter2 = 0;
+        String str = "";
+        for(int i = 0; i < Courses.length; i++){
+            if(Courses[i].contains(": IP")){
+                str += Courses[i];
+                counter2++;
+                if(counter2 != counter){
+                    str += ", ";
+                }
+            }
+        }
+
+        System.out.println(str);
+    }
+    
+    
     public void dropCourse(String permNumber, String enrollCode){
 
         String sql = "SELECT taken FROM students WHERE perm = " + permNumber;
         // Look up the taken courses field. Count the number of courses that are being taken in Fall 2022. Ensure that at least 2
-        // courses like that exist for this student. 
+        // courses like that exist for this student.
         // Then, update the student info in the students field by remove the correct course info from the taken field.
 
         String taken_courses = "";
@@ -307,10 +349,11 @@ public class MainApp {
         try (Connection conn = this.connect();
              Statement stmt  = conn.createStatement();
              ResultSet rs    = stmt.executeQuery(sql)){
-              
+             
                 while(rs.next()) { // Note there will only be one result
                     String s = rs.getString("taken");
                     taken_courses = s.replace("\"", ""); // Remove the quotes
+                    taken_courses = taken_courses.replace(",", "");
                 }
              }
         catch (SQLException e) {
@@ -318,14 +361,14 @@ public class MainApp {
         }
 
         String[] Courses = taken_courses.split(" ");
-        
+       
         int counter = 0;
         for(int i = 0; i < Courses.length; i++){
             if(Courses[i].equals("IP")){
                 counter++;
             }
         }
-        
+
         boolean current = false;
         String tester = enrollCode + ":";
         if(counter >= 2){
@@ -375,7 +418,7 @@ public class MainApp {
                     PreparedStatement pstmt = conn.prepareStatement(sql2)){
                     pstmt.setString(1, str);
                     pstmt.setString(2, permNumber);
-                    
+                   
                     pstmt.executeUpdate();
 
                 } catch (SQLException e) {
@@ -415,6 +458,25 @@ public class MainApp {
             	System.out.println(e.getMessage());
         }
        	return name;
+    }
+    
+    public void changePin(String perm, String newP) {
+    	String sql = "UPDATE students SET pin = ?"
+    			+ "WHERE perm = ?";
+    	
+    	try (Connection conn = this.connect();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        	
+        	pstmt.setString(1, newP);
+            pstmt.setString(2, perm);
+            
+            pstmt.executeUpdate();
+        
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    	
+    	
     }
     
     public int currCourseNum(String perm) {
@@ -512,6 +574,12 @@ public class MainApp {
     	taken = taken.concat(addC);
     	//System.out.print("\n New taken attri.: " + taken + "\n");
     	
+    	//make sure there's a " at the beginning of multi-item list
+    	String var = "\"";
+    	if(taken.substring(0,1) != var) {
+    		taken = var.concat(taken);
+    	}
+    	
     	String sql3 = "UPDATE students SET taken = ?"
     			+ "WHERE perm = ?";
 
@@ -576,12 +644,14 @@ public class MainApp {
     					app.addCourse(perm, enrollcode);
     					break;
     				case 2:
-    					System.out.print("\nEnter enrollment code for course to drop: ");
+    					System.out.print("\nEnter course number for class to drop: ");
     					enrollcode = System.console().readLine();
+    					//enrollcode var name but actually uses "cnum"
     					app.dropCourse(perm, enrollcode);
     					break;
     				case 3:
-    					System.out.print("\nList current course");
+    					System.out.print("\nCurrently enrolled courses: \n");
+    					app.generateCourseListing(perm);
     					
     					break;
     				case 4:
@@ -597,8 +667,9 @@ public class MainApp {
     					
     					break;
     				case 7:
-    					System.out.print("\nChange PIN");
-    					
+    					System.out.print("\nEnter new PIN: ");
+    					String newP = System.console().readLine();
+    					app.changePin(perm, newP);
     					break;    				   				
     				}
     				
@@ -617,6 +688,7 @@ public class MainApp {
     					System.exit(0);
     				case 1:
     					System.out.print("\nEnter enroll code for course: ");
+    					String enrollcode = System.console().readLine();
     					System.out.print("\nEnter perm number of student to add: ");
     			
     					break;
