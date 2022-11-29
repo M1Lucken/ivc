@@ -148,6 +148,84 @@ public class MainApp {
         }
     }
     
+    public void addCourseData() {
+    	String splitBy = ",";
+    	int split = 0;
+    	int check = 0;
+    	
+    	try {
+    	BufferedReader reader2 = new BufferedReader(new FileReader("CourseHistory.csv"));
+    	List<String> lines2 = new ArrayList<>();
+    	String line2 = null;
+    	int listCount2 = 0;
+    	while ((line2 = reader2.readLine()) != null) {
+    	 	if(!line2.contains("Course Number")) lines2.add(line2);
+    	 	listCount2++;
+    	}	
+    	
+    	
+    	
+    	for(int i = 0; i < listCount2-1; i++) {
+    		String[] insertVal = new String[9];
+        	int ctr = 0;    	
+    		String[] course = lines2.get(i).split(splitBy);
+    		    		
+    		for(int j = 0; j < course.length; j++) {
+    			if(course[j].contains("\"")) {   				
+    				
+    				 for(int k = j+1; k < course.length; k++) {
+    					
+    					course[j] = course[j].concat(course[k]);
+    					
+    					split++;
+    					
+    					if(course[k].contains("\"")) check = 1;
+    					if(check == 1) break;
+    				 }
+    			}
+    			
+    			insertVal[ctr] = course[j];
+    			ctr++;
+    			
+    			j = j + split;
+    			split = 0;
+    			check = 0;
+    			
+    		}
+    		
+    		for(int c = 0; c < 9; c++) {
+    			//if(insertVal != null) System.out.println(insertVal[c] + "\t");
+    		}
+    		
+    		          
+    		
+    		String sql = "INSERT INTO courses(cnum,enroll,qyear,ctitle,prof,loc,time,max,prereq) VALUES(?,?,?,?,?,?,?,?,?)";
+
+            try (Connection conn = this.connect();
+                    PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            	pstmt.setString(1, insertVal[0]);
+            	pstmt.setString(2, insertVal[1]);
+                pstmt.setString(3, insertVal[2]);
+                pstmt.setString(4, insertVal[3]);
+                pstmt.setString(5, insertVal[4]);
+                pstmt.setString(6, insertVal[5]);
+                pstmt.setString(7, insertVal[6]);
+                pstmt.setInt(8, Integer.valueOf(insertVal[7]));
+                pstmt.setString(9, insertVal[8]);
+                pstmt.executeUpdate();
+                
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
+            }
+    		
+    	} 
+    	} catch (Exception b) {
+        		b.printStackTrace();
+        	
+    	}
+    	
+    }
+    
     
     public static void main(String[] args) throws Exception {
     	System.out.println("Running MainApp.java for IVC DBMS...\t");
@@ -169,7 +247,7 @@ public class MainApp {
     	
     	
     	//for(int i = 0; i < listCount-1; i++) {
-    	for(int i = 0; i < 12; i++) {
+    	for(int i = 0; i < listCount-1; i++) {
     		String[] insertVal = new String[7];
         	int ctr = 0;
     		//System.out.println("original line: " + lines.get(i));
@@ -208,81 +286,21 @@ public class MainApp {
     		for(int c = 0; c < 7; c++) {
     			//if(insertVal != null) System.out.println(insertVal[c] + "\t");
     		}
-    		app.sInsert(insertVal[0],insertVal[1],insertVal[2],insertVal[3],insertVal[4],insertVal[5],insertVal[6]);
+    		//insert student roster into ivc.db via esql
+    		//app.sInsert(insertVal[0],insertVal[1],insertVal[2],insertVal[3],insertVal[4],insertVal[5],insertVal[6]);
     		
     	}
+    	    	
     	
-    	
-    	/**
-    	//read in test CSV datasets
-    	String line = "";
-    	String splitBy = ",";
-    	
-    	//load student roster
-    	try {
-    		BufferedReader br = new BufferedReader(new FileReader("simple.csv"));
-    		int tLine = 0;
-    		while((line = br.readLine())!= null){
-    			
-    			String[] student = line.split(splitBy);
-    			
-    			for(int i = 0; i < student.length; i++) {
-    				System.out.println(student[i] + " index = " + i + "\t");
-    			}
-    			
-    			//fix "" issue for strings in CSV as using comma for separator does not produce intended results
-    			for(int i = 0; i < 7; i++) {
-    				
-    				if(student[i].contains("\"")) {
-    					
-    					int index = 0;
-    					int breaknext = 0;
-    					for(int j = i+1; j < student.length; j++) {
-    						if(breaknext == 1) break;
-    						student[i] = student[i].concat(student[j]);
-    						index = j;
-    						
-    						
-    						if(student[j+1].contains("\"")) breaknext = 1;
-    					}
-    					
-    					for(int k = i+1; k < (student.length - index -  3); k++) {
-    						System.out.println("debug " + student[k] + " set to " + student[k+1]);
-    						student[k] = student [k+1];
-    					}
-    					
-    					//System.out.println(student[index] + " index is " + index + "\t");	
-    				}
-   
-    				System.out.println(student[i] + " index = " + i + "\t");
-    			}
-    			
-    			//debug print string
-    			//System.out.println("Name: " + student[0] + "|" + "Address: " + student[1] + "|"  + "Major: " + student[2] + "|"  + "Department: " + student[3] + "|"  + "PIN: " + student[4] + "|"  + "Taken: " + student[5] + "|"  + "Perm Number: " + student[6] + "|"  + "\t");
-    			
-    			//verify header line is skipped
-    			if(tLine == 1 && student.length == 7) {
-    				app.sInsert(student[0], student[1], student[2], student[3], student[4], student[5], student[6]);
-    			}
-    			
-    			tLine = 1;
-    		}
-    	}
-    	
-    	catch (IOException e) {
-    		e.printStackTrace();
-    	}
-        
-        */
-        
+    	       
         //app.sInsert("Ted Willis","474 Mayflower Avenue Bemidji, MN 56601","Astronomy","Natural Sciences","3532","2021 Fall: COMM1A: A, 2022 Winter: COMM1B: A, 2022 Spring: COMM1C: A, 2022 Fall: ASTR1: IP","2803084");
-        //app.sInsert("Edna Schwartz","44 Acacia St. Central Islip, NY 11722","Astronomy","Natural Sciences","4031","2022 Fall: ASTR1: IP","3524808");
-        //app.sInsert("Patricia Peters","7335 Arnold Street West Haven, CT 06516","Astronomy","Natural Sciences","6624","2022 Fall: ASTR1: IP","3888454");
         
-    	//use to reset students table 
+        //use to reset students table 
     	//app.sDeleteAll();
     	
         //app.sSelectAll();
+    	
+    	app.addCourseData();
         
         
     }
