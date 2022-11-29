@@ -455,7 +455,8 @@ public class MainApp {
     		pinno = rs.getString("pin");    		    		   		   		   		
     	}	catch (SQLException e) {
             	System.out.println(e.getMessage());
-        }    
+        }
+    	if(pinno == null) return false;
     	if((Integer.compare(Integer.valueOf(upin),Integer.valueOf(pinno))) == 0) return true;
     	else return false; 
     	
@@ -477,9 +478,10 @@ public class MainApp {
     }
     
     public void changePin(String perm, String newP) {
+    	if(!(perm.length() == 4)) return;
     	String sql = "UPDATE students SET pin = ?"
     			+ "WHERE perm = ?";
-    	
+    	    	   	
     	try (Connection conn = this.connect();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
         	
@@ -518,7 +520,7 @@ public class MainApp {
     		        count++;
         	}    	
     	return count;
-    }
+    }    
     
     public void addCourse(String perm, String enroll) {
     	String taken = null;
@@ -614,6 +616,40 @@ public class MainApp {
     	
     }
     
+    public void previousQuarterGrades(String permNumber){
+        String sql = "SELECT taken FROM students WHERE perm = " + permNumber;
+        String taken_courses = "";
+        String[] Courses = null;
+
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql)){
+             
+                while(rs.next()) { // Note there will only be one result
+                    String s = rs.getString("taken");
+                    taken_courses = s.replace("\"", ""); // Remove the quotes
+                    Courses = taken_courses.split(", ");
+                }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        List<String> grades = new ArrayList<String>();
+        for(int i = 0; i < Courses.length; i++){
+            String[] info = Courses[i].split(": ");
+            if(info[0].equals("2022 Spring")){
+                grades.add(Courses[i]);
+            }
+        }
+
+        System.out.println("");
+        for(int i = 0; i < grades.size(); i++){
+            System.out.println(grades.get(i));
+        }
+
+    }
+    
     
     public static void main(String[] args) throws Exception {
     	System.out.println("Starting main application for IVC DBMS...\n\n");
@@ -627,15 +663,20 @@ public class MainApp {
     	//if(inter == "g" || inter == "r") {     	    	
     		switch(inter) {
     			case "g":
-    				//GOLD
+    				//GOLD    				
     				System.out.print("Starting GOLD... \n\n");
     				
     				System.out.print("Enter Perm Number: ");
     				String perm = System.console().readLine();
     				System.out.print("\nEnter PIN: ");
     				String pin = System.console().readLine();
-    				
+    				while(!(pin.length() == 4)) {
+    					System.out.print("\nInvalid Pin. ");
+    					System.out.print("\nEnter PIN: ");
+    					pin = System.console().readLine();
+    				}
     				//verify pin matches perm, exit if false
+    				
     				if(app.verifyPin(perm,pin)) {
     					String stuname = app.getName(perm);
     					System.out.print("\nLogin Successful. Welcome back, " + stuname + ".\n");
@@ -645,14 +686,16 @@ public class MainApp {
     					System.exit(0);    					
     				}
     				
+    				while(true) {
     				System.out.print("\nOPERATIONS\n");
     				System.out.print("0 | Exit GOLD \n1 | Add course \n2 | Drop course \n3 | List currently enrolled courses \n4 | List grades from "
     						+ "previous quarter\n5 | Requirements check\n6 | Generate study plan\n7 | Change PIN\n");
-    				System.out.print("Choose the operation desired by entering its corresponding number from the above list: ");
+    				System.out.print("Choose the operation desired by entering its corresponding number from the list above: ");
     				int choice = Integer.valueOf(System.console().readLine());
     				
     				switch(choice) {
     				case 0:
+    					System.out.print("\nExiting.");
     					System.exit(0);    					
     				case 1:
     					System.out.print("\nEnter enrollment code for course to add: ");
@@ -671,8 +714,8 @@ public class MainApp {
     					
     					break;
     				case 4:
-    					System.out.print("\nList grades from last quarter");
-    					
+    					System.out.print("\nList grades from last quarter");    					
+    					app.previousQuarterGrades(perm);
     					break;
     				case 5:
     					System.out.print("\nRequirements check");
@@ -688,19 +731,22 @@ public class MainApp {
     					app.changePin(perm, newP);
     					break;    				   				
     				}
+    				System.out.print("\n<<=======================================================>>\n");
+    				}
     				
-    				break;
     			case "r":
     				//Registrar
     				System.out.print("Starting Registrar... \n\n");
     				   				
+    				while(true) {
     				System.out.print("\nOPERATIONS\n");
     				System.out.print("0 | Exit Registrar \n1 | Add student to course \n2 | Drop student from course \n3 | List all courses a student has taken\n4 | List student grades from "
     						+ "previous quarter\n5 | Generate class list\n6 | Enter course grades\n7 | Print student transcript\n8 | Generate grade mailer for all students\n");
-    				System.out.print("Choose the operation desired by entering its corresponding number from the above list: ");
+    				System.out.print("Choose the operation desired by entering its corresponding number from the list above: ");
     				int choice2 = Integer.valueOf(System.console().readLine());
     				switch(choice2) {
     				case 0:
+    					System.out.print("\nExiting.");
     					System.exit(0);
     				case 1:
     					System.out.print("\nEnter enroll code for course: ");
@@ -723,7 +769,8 @@ public class MainApp {
     					break;
     				case 4:
     					System.out.print("\nEnter perm number of student to list grades of previous quarter: ");
-    				
+    					sPerm = System.console().readLine();
+    					app.previousQuarterGrades(sPerm); 				
     					break;
     				case 5:
     					System.out.print("\nEnter perm number of student to generate class list: ");
@@ -741,7 +788,9 @@ public class MainApp {
     					System.out.print("\nEmail everyone their grades!");
     					break; 
     				}
-    				break;
+    				System.out.print("\n<<--------------------------------------------------->>\n");
+    				}
+    				
     		}
     	//}
     	/**
