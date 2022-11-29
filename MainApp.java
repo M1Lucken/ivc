@@ -295,6 +295,63 @@ public class MainApp {
     	
     }
     
+    public boolean verifyPin(String perm, String upin) {
+    	String pinno = null;
+    	//get pin from student, get pin from db, compare
+    	String sql = "SELECT pin FROM students WHERE perm = ?";    	
+    	try (Connection conn = this.connect();    			
+    			PreparedStatement pstmt  = conn.prepareStatement(sql)){    		
+    		pstmt.setString(1,perm);
+    		ResultSet rs  = pstmt.executeQuery();
+    		pinno = rs.getString("pin");    		    		   		   		   		
+    	}	catch (SQLException e) {
+            	System.out.println(e.getMessage());
+        }    
+    	if((Integer.compare(Integer.valueOf(upin),Integer.valueOf(pinno))) == 0) return true;
+    	else return false; 
+    	
+    }
+    
+    public String getName(String perm) {
+    	String name = null;
+    	String sql = "SELECT name FROM students WHERE perm = ?";    	
+    	try (Connection conn = this.connect();    			
+    			PreparedStatement pstmt  = conn.prepareStatement(sql)){    		
+    		pstmt.setString(1,perm);
+    		ResultSet rs  = pstmt.executeQuery();
+    		name = rs.getString("name");
+    		   		   		   		
+    	}	catch (SQLException e) {
+            	System.out.println(e.getMessage());
+        }
+       	return name;
+    }
+    
+    public int currCourseNum(String perm) {
+    	int count = 0;
+    	String ip = "IP";
+    	String taken = null;
+    	
+    	//get current courses taken for student
+    	String sql = "SELECT taken FROM students WHERE perm = ?";    	
+    	try (Connection conn = this.connect();    			
+    			PreparedStatement pstmt  = conn.prepareStatement(sql)){    		
+    		pstmt.setString(1,perm);
+    		ResultSet rs  = pstmt.executeQuery();
+    		taken = rs.getString("taken");
+    		   		   		   		
+    	}	catch (SQLException e) {
+            	System.out.println(e.getMessage());
+        }    	
+    	if(taken.contains(ip)) {
+    		String[] words = taken.replaceAll("\\p{Punct}", "").split(" ");
+    		for (int i=0; i < words.length; i++)
+    		    if (words[i].equals(ip))
+    		        count++;
+        	}    	
+    	return count;
+    }
+    
     public void addCourse(String perm, String enroll) {
     	String taken = null;
     	String prereq = null;
@@ -327,29 +384,36 @@ public class MainApp {
             	System.out.println(e.getMessage());
         }
     	
+    	if(currCourseNum(perm) > 4) {
+			System.out.print("Already enrolled in five courses currently!");
+			return;
+		}
+    	
+    	if(taken.contains(cnum)){
+			System.out.print("Cannot add course you've already enrolled in!");
+			return;    		
+		}
+    	
     	//parse prereq
-    	String splitBy = ", ";
-    	String[] res = prereq.split(splitBy);
-    	int takenReq = res.length;
+    	if(prereq != null) {
+    		String splitBy = ", ";
+    		String[] res = prereq.split(splitBy);
+    		int takenReq = res.length;
     	//verify prerequisites satisfied
-    	for(int i=0; i<res.length; i++) {    		
-    		if(taken.contains(res[i])) {
-    			takenReq--;
+    		for(int i=0; i<res.length; i++) {    		
+    			if(taken.contains(res[i])) {
+    				takenReq--;
+    			}
+    			if(taken.contains(res[i] + ": IP")){
+    				System.out.print("Cannot add course for which you are currently taking a prerequisite for!");
+    				return;
+    			}    		
     		}
-    		if(taken.contains(res[i] + ": IP")){
-    			System.out.print("Cannot add course for which you are currently taking a prerequisite for!");
+    		if(takenReq > 0) {
+    			System.out.print("Prerequisite not satisfied!");
     			return;
     		}
-    		if(taken.contains(cnum)){
-    			System.out.print("Cannot add course you've already enrolled in!");
-    			return;    		
-    		}
-     	}
-    	if(takenReq > 0) {
-    		System.out.print("Prerequisite not satisfied!");
-    		return;
     	}
-    	
     	//update courses taken for student
     	String addC = qyear + ": " + cnum + ": IP\"";
     	//remove " from end of taken
@@ -378,7 +442,7 @@ public class MainApp {
     
     
     public static void main(String[] args) throws Exception {
-    	System.out.println("Running MainApp.java for IVC DBMS...\n\n");
+    	System.out.println("Starting main application for IVC DBMS...\n\n");
     	
     	MainApp app = new MainApp();
     	
@@ -398,14 +462,24 @@ public class MainApp {
     				String pin = System.console().readLine();
     				
     				//verify pin matches perm, exit if false
+    				if(app.verifyPin(perm,pin)) {
+    					String stuname = app.getName(perm);
+    					System.out.print("\nLogin Successful. Welcome back, " + stuname + ".\n");
+    				}
+    				else {  
+    					System.out.print("\nIncorrect Login!");
+    					System.exit(0);    					
+    				}
     				
     				System.out.print("\nOPERATIONS\n");
-    				System.out.print("1 | Add course \n2 | Drop course \n3 | List currently enrolled courses \n4 | List grades from "
+    				System.out.print("0 | Exit GOLD \n1 | Add course \n2 | Drop course \n3 | List currently enrolled courses \n4 | List grades from "
     						+ "previous quarter\n5 | Requirements check\n6 | Generate study plan\n7 | Change PIN\n");
     				System.out.print("Choose the operation desired by entering its corresponding number from the above list: ");
     				int choice = Integer.valueOf(System.console().readLine());
     				
     				switch(choice) {
+    				case 0:
+    					System.exit(0);    					
     				case 1:
     					System.out.print("\nEnter enrollment code for course to add: ");
     					String enrollcode = System.console().readLine();
@@ -443,11 +517,13 @@ public class MainApp {
     				System.out.print("Starting Registrar... \n\n");
     				   				
     				System.out.print("\nOPERATIONS\n");
-    				System.out.print("1 | Add student to course \n2 | Drop student from course \n3 | List current student courses \n4 | List student grades from "
+    				System.out.print("0 | Exit Registrar \n1 | Add student to course \n2 | Drop student from course \n3 | List current student courses \n4 | List student grades from "
     						+ "previous quarter\n5 | Generate class list\n6 | Enter course grades\n7 | Print student transcript\n8 | Generate grade mailer for all students\n");
     				System.out.print("Choose the operation desired by entering its corresponding number from the above list: ");
     				int choice2 = Integer.valueOf(System.console().readLine());
     				switch(choice2) {
+    				case 0:
+    					System.exit(0);
     				case 1:
     					System.out.print("\nEnter enroll code for course: ");
     					System.out.print("\nEnter perm number of student to add: ");
@@ -546,6 +622,8 @@ public class MainApp {
     	//app.sDeleteAll();
     	
         //app.sSelectAll();
+       	//String permy = "2582545";
+       	//System.out.print("\nCurrent courses " + permy + " is taking is " + app.currCourseNum(permy) + "\n");
        	            
     }
 
