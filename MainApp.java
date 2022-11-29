@@ -226,6 +226,73 @@ public class MainApp {
     	
     }
     
+
+    public void addMajorData() {
+    	String splitBy = ",";
+    	int split = 0;
+    	int check = 0;
+    	
+    	try {
+    	BufferedReader reader3 = new BufferedReader(new FileReader("Quarter_Major.csv"));
+    	List<String> lines3 = new ArrayList<>();
+    	String line3 = null;
+    	int listCount3 = 0;
+    	while ((line3 = reader3.readLine()) != null) {
+    	 	if(!line3.contains("Current Quarter")) lines3.add(line3);
+    	 	listCount3++;
+    	}
+    	for(int i = 0; i < listCount3-1; i++) {
+    		String[] insertVal = new String[5];
+        	int ctr = 0;    	
+    		String[] major = lines3.get(i).split(splitBy);
+    		    		
+    		for(int j = 0; j < major.length; j++) {
+    			if(major[j].contains("\"")) {   				
+    				
+    				 for(int k = j+1; k < major.length; k++) {
+    					
+    					major[j] = major[j].concat(major[k]);
+    					
+    					split++;
+    					
+    					if(major[k].contains("\"")) check = 1;
+    					if(check == 1) break;
+    				 }
+    			}
+    			
+    			insertVal[ctr] = major[j];
+    			ctr++;
+    			
+    			j = j + split;
+    			split = 0;
+    			check = 0;    			
+    		}    		
+    		for(int c = 0; c < 5; c++) {
+    			//if(insertVal != null) System.out.println(insertVal[c] + "\t");
+    		} 
+    		String sql = "INSERT INTO majors(mname,dname,mandatory,electives,min) VALUES(?,?,?,?,?)";
+
+            try (Connection conn = this.connect();
+                    PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            	pstmt.setString(1, insertVal[0]);
+            	pstmt.setString(2, insertVal[1]);
+                pstmt.setString(3, insertVal[2]);
+                pstmt.setString(4, insertVal[3]);
+                pstmt.setInt(5, Integer.valueOf(insertVal[4]));                
+                pstmt.executeUpdate();
+                
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
+            }
+    		
+    	} 
+    	} catch (Exception b) {
+        		b.printStackTrace();
+        	
+    	}
+    	
+    }
+    
     
     public static void main(String[] args) throws Exception {
     	System.out.println("Running MainApp.java for IVC DBMS...\t");
@@ -300,7 +367,8 @@ public class MainApp {
     	
         //app.sSelectAll();
     	
-    	app.addCourseData();
+    	//app.addCourseData();
+    	app.addMajorData();
         
         
     }
