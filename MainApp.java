@@ -174,7 +174,7 @@ public class MainApp {
     			if(course[j].contains("\"")) {   				
     				
     				 for(int k = j+1; k < course.length; k++) {
-    					if(k < course.length - 1) course[j] = course[j].concat(",");
+    					if(k < course.length) course[j] = course[j].concat(",");
     					course[j] = course[j].concat(course[k]);
     					
     					split++;
@@ -250,16 +250,16 @@ public class MainApp {
     			if(major[j].contains("\"")) {   				
     				
     				 for(int k = j+1; k < major.length; k++) {
-    					//if(k < major.length - 1) 
-    					major[j] = major[j].concat(",");
+    					if(k < major.length - 1) major[j] = major[j].concat(",");     					
     					major[j] = major[j].concat(major[k]);
-    					major[j] = major[j].substring(0,major[j].length()-1);
+    					//major[j] = major[j].substring(0,major[j].length()-1);
     					
     					split++;
     					
     					if(major[k].contains("\"")) check = 1;
     					if(check == 1) break;
-    				 }
+    				 }  				    				
+    				
     			}
     			
     			insertVal[ctr] = major[j];
