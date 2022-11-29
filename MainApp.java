@@ -340,6 +340,10 @@ public class MainApp {
     			System.out.print("Cannot add course for which you are currently taking a prerequisite for!");
     			return;
     		}
+    		if(taken.contains(cnum)){
+    			System.out.print("Cannot add course you've already enrolled in!");
+    			return;    		
+    		}
      	}
     	if(takenReq > 0) {
     		System.out.print("Prerequisite not satisfied!");
@@ -352,9 +356,23 @@ public class MainApp {
     	taken = taken.substring(0,taken.length()-1);
     	taken = taken.concat(", ");
     	taken = taken.concat(addC);
-    	System.out.print("\n" + taken + "\n");
-    	//String sql3 = "UPDATE students SET taken = ?,"
-    			//+ "WHERE perm = ?";
+    	//System.out.print("\n New taken attri.: " + taken + "\n");
+    	
+    	String sql3 = "UPDATE students SET taken = ?"
+    			+ "WHERE perm = ?";
+
+        try (Connection conn = this.connect();
+                PreparedStatement pstmt = conn.prepareStatement(sql3)){
+        	
+        	pstmt.setString(1, taken);
+            pstmt.setString(2, perm);
+            
+            pstmt.executeUpdate();
+        
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        
+        }
     	
     }
     
@@ -364,8 +382,8 @@ public class MainApp {
     	
     	MainApp app = new MainApp();
     	
-    	System.out.print("<<< SELECT INTERFACE >>>\n\n");    	
-    	System.out.print("Enter \"g\" for GOLD, \"r\" for Registrar\n");    	
+    	System.out.print("<<< SELECT INTERFACE >>>\n");    	
+    	System.out.print("Enter \"g\" for GOLD, \"r\" for Registrar: ");    	
     	String inter = System.console().readLine();
     	    	
     	//if(inter == "g" || inter == "r") {     	    	
@@ -389,22 +407,33 @@ public class MainApp {
     				
     				switch(choice) {
     				case 1:
-    					System.out.print("Enter enrollment code: ");
+    					System.out.print("\nEnter enrollment code for course to add: ");
     					String enrollcode = System.console().readLine();
     					app.addCourse(perm, enrollcode);
     					break;
     				case 2:
+    					System.out.print("\nEnter enrollment code for course to drop: ");
+    					
     					break;
     				case 3:
+    					System.out.print("\nList current course");
+    					
     					break;
     				case 4:
+    					System.out.print("\nList grades from last quarter");
+    					
     					break;
     				case 5:
+    					System.out.print("\nRequirements check");
+    					
     					break;
     				case 6:
+    					System.out.print("\nMake a study plan");
+    					
     					break;
     				case 7:
-    					System.out.print("\nChange PIN\n");
+    					System.out.print("\nChange PIN");
+    					
     					break;    				   				
     				}
     				
@@ -420,21 +449,38 @@ public class MainApp {
     				int choice2 = Integer.valueOf(System.console().readLine());
     				switch(choice2) {
     				case 1:
+    					System.out.print("\nEnter enroll code for course: ");
+    					System.out.print("\nEnter perm number of student to add: ");
+    			
     					break;
     				case 2:
+    					System.out.print("\nEnter enroll code for course: ");
+    					System.out.print("\nEnter perm number of student to drop: ");
+    			
     					break;
     				case 3:
+    					System.out.print("\nEnter perm number of student to list courses taken: ");
+    					    					
     					break;
     				case 4:
+    					System.out.print("\nEnter perm number of student to list grades of previous quarter: ");
+    				
     					break;
     				case 5:
+    					System.out.print("\nEnter perm number of student to generate class list: ");
+    					
     					break;
     				case 6:
+    					System.out.print("\nEnter enroll code for class to add grades to: ");
+    					System.out.print("\nEnter file name: ");
+    					
     					break;
     				case 7:
+    					System.out.print("\nEnter perm number of student to print transcript for: ");
+    					
     					break;
     				case 8:
-    					System.out.print("\nEmail everyone!\n");
+    					System.out.print("\nEmail everyone their grades!");
     					break; 
     				}
     				break;
@@ -492,8 +538,8 @@ public class MainApp {
     		
     	}
     	    	
-       	app.addCourseData();
-    	app.addMajorData();
+       	//app.addCourseData();
+    	//app.addMajorData();
     	       
                 
         //use to reset students table 
