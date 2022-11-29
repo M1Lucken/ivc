@@ -174,7 +174,7 @@ public class MainApp {
     			if(course[j].contains("\"")) {   				
     				
     				 for(int k = j+1; k < course.length; k++) {
-    					
+    					if(k < course.length - 1) course[j] = course[j].concat(",");
     					course[j] = course[j].concat(course[k]);
     					
     					split++;
@@ -250,8 +250,10 @@ public class MainApp {
     			if(major[j].contains("\"")) {   				
     				
     				 for(int k = j+1; k < major.length; k++) {
-    					
+    					//if(k < major.length - 1) 
+    					major[j] = major[j].concat(",");
     					major[j] = major[j].concat(major[k]);
+    					major[j] = major[j].substring(0,major[j].length()-1);
     					
     					split++;
     					
@@ -293,10 +295,157 @@ public class MainApp {
     	
     }
     
+    public void addCourse(String perm, String enroll) {
+    	String taken = null;
+    	String prereq = null;
+    	String cnum = null;
+    	String qyear = null;
+      	
+    	//get current courses taken for student
+    	String sql1 = "SELECT taken FROM students WHERE perm = ?";    	
+    	try (Connection conn = this.connect();    			
+    			PreparedStatement pstmt  = conn.prepareStatement(sql1)){    		
+    		pstmt.setString(1,perm);
+    		ResultSet rs  = pstmt.executeQuery();
+    		taken = rs.getString("taken");
+    		   		   		   		
+    	}	catch (SQLException e) {
+            	System.out.println(e.getMessage());
+        }
+    	
+    	//lookup course info with enroll code from courses
+    	//format "2021 Fall: COMM1A: A, 2022 Fall: ASTR1: IP"
+    	String sql2 = "SELECT qyear, cnum, prereq FROM courses WHERE enroll = ?";    	
+    	try (Connection conn = this.connect();    			
+    			PreparedStatement pstmt  = conn.prepareStatement(sql2)){    		
+    		pstmt.setString(1,enroll);
+    		ResultSet rs  = pstmt.executeQuery();
+    		cnum = rs.getString("cnum");
+    		qyear = rs.getString("qyear");
+    		prereq = rs.getString("prereq");    		   		   		   		
+    	}	catch (SQLException e) {
+            	System.out.println(e.getMessage());
+        }
+    	
+    	//parse prereq
+    	String splitBy = ", ";
+    	String[] res = prereq.split(splitBy);
+    	int takenReq = res.length;
+    	//verify prerequisites satisfied
+    	for(int i=0; i<res.length; i++) {    		
+    		if(taken.contains(res[i])) {
+    			takenReq--;
+    		}
+    		if(taken.contains(res[i] + ": IP")){
+    			System.out.print("Cannot add course for which you are currently taking a prerequisite for!");
+    			return;
+    		}
+     	}
+    	if(takenReq > 0) {
+    		System.out.print("Prerequisite not satisfied!");
+    		return;
+    	}
+    	
+    	//update courses taken for student
+    	String addC = qyear + ": " + cnum + ": IP\"";
+    	//remove " from end of taken
+    	taken = taken.substring(0,taken.length()-1);
+    	taken = taken.concat(", ");
+    	taken = taken.concat(addC);
+    	System.out.print("\n" + taken + "\n");
+    	//String sql3 = "UPDATE students SET taken = ?,"
+    			//+ "WHERE perm = ?";
+    	
+    }
+    
     
     public static void main(String[] args) throws Exception {
-    	System.out.println("Running MainApp.java for IVC DBMS...\t");
+    	System.out.println("Running MainApp.java for IVC DBMS...\n\n");
+    	
     	MainApp app = new MainApp();
+    	
+    	System.out.print("<<< SELECT INTERFACE >>>\n\n");    	
+    	System.out.print("Enter \"g\" for GOLD, \"r\" for Registrar\n");    	
+    	String inter = System.console().readLine();
+    	    	
+    	//if(inter == "g" || inter == "r") {     	    	
+    		switch(inter) {
+    			case "g":
+    				//GOLD
+    				System.out.print("Starting GOLD... \n\n");
+    				
+    				System.out.print("Enter Perm Number: ");
+    				String perm = System.console().readLine();
+    				System.out.print("\nEnter PIN: ");
+    				String pin = System.console().readLine();
+    				
+    				//verify pin matches perm, exit if false
+    				
+    				System.out.print("\nOPERATIONS\n");
+    				System.out.print("1 | Add course \n2 | Drop course \n3 | List currently enrolled courses \n4 | List grades from "
+    						+ "previous quarter\n5 | Requirements check\n6 | Generate study plan\n7 | Change PIN\n");
+    				System.out.print("Choose the operation desired by entering its corresponding number from the above list: ");
+    				int choice = Integer.valueOf(System.console().readLine());
+    				
+    				switch(choice) {
+    				case 1:
+    					System.out.print("Enter enrollment code: ");
+    					String enrollcode = System.console().readLine();
+    					app.addCourse(perm, enrollcode);
+    					break;
+    				case 2:
+    					break;
+    				case 3:
+    					break;
+    				case 4:
+    					break;
+    				case 5:
+    					break;
+    				case 6:
+    					break;
+    				case 7:
+    					System.out.print("\nChange PIN\n");
+    					break;    				   				
+    				}
+    				
+    				break;
+    			case "r":
+    				//Registrar
+    				System.out.print("Starting Registrar... \n\n");
+    				   				
+    				System.out.print("\nOPERATIONS\n");
+    				System.out.print("1 | Add student to course \n2 | Drop student from course \n3 | List current student courses \n4 | List student grades from "
+    						+ "previous quarter\n5 | Generate class list\n6 | Enter course grades\n7 | Print student transcript\n8 | Generate grade mailer for all students\n");
+    				System.out.print("Choose the operation desired by entering its corresponding number from the above list: ");
+    				int choice2 = Integer.valueOf(System.console().readLine());
+    				switch(choice2) {
+    				case 1:
+    					break;
+    				case 2:
+    					break;
+    				case 3:
+    					break;
+    				case 4:
+    					break;
+    				case 5:
+    					break;
+    				case 6:
+    					break;
+    				case 7:
+    					break;
+    				case 8:
+    					System.out.print("\nEmail everyone!\n");
+    					break; 
+    				}
+    				break;
+    		}
+    	//}
+    	/**
+    	else {
+    		System.out.print("Invalid Input");
+    		System.exit(0);
+    	}
+    	*/    	   	
     	
     	BufferedReader reader = new BufferedReader(new FileReader("StudentRoster.csv"));
     	List<String> lines = new ArrayList<>();
@@ -305,72 +454,53 @@ public class MainApp {
     	while ((line = reader.readLine()) != null) {
     	 	if(!line.contains("Student Name")) lines.add(line);
     	 	listCount++;
-    	}
-
-    	
+    	}    	
     	String splitBy = ",";
     	int split = 0;
-    	int check = 0;
+    	int check = 0;  	
     	
-    	
-    	//for(int i = 0; i < listCount-1; i++) {
-    	for(int i = 0; i < listCount-1; i++) {
+       	for(int i = 0; i < listCount-1; i++) {
     		String[] insertVal = new String[7];
-        	int ctr = 0;
-    		//System.out.println("original line: " + lines.get(i));
-    		String[] student = lines.get(i).split(splitBy);
-    		
+        	int ctr = 0;    		
+    		String[] student = lines.get(i).split(splitBy);    		
     		for(int j = 0; j < student.length; j++) {
-    			//System.out.println(j + " index \t");
-
-    			if(student[j].contains("\"")) {
-    				
-    				//System.out.println("concat start w/: " + student[j]);
-    				
+    			
+    			if(student[j].contains("\"")) {    				
     				 for(int k = j+1; k < student.length; k++) {
-    					
-    					student[j] = student[j].concat(student[k]);
-    					
-    					split++;
-    					
+    					if(k < student.length - 1) student[j] = student[j].concat(",");
+    					student[j] = student[j].concat(student[k]);    					
+    					split++;    					
     					if(student[k].contains("\"")) check = 1;
     					if(check == 1) break;
     				 }
     			}
     			
     			insertVal[ctr] = student[j];
-    			ctr++;
-    			
+    			ctr++;    			
     			j = j + split;
     			split = 0;
     			check = 0;
-    			    			
     			
-    			
-    			//System.out.println("fixed member: " + student[j]);
     		}
     		
     		for(int c = 0; c < 7; c++) {
     			//if(insertVal != null) System.out.println(insertVal[c] + "\t");
     		}
+    		
     		//insert student roster into ivc.db via esql
     		//app.sInsert(insertVal[0],insertVal[1],insertVal[2],insertVal[3],insertVal[4],insertVal[5],insertVal[6]);
     		
     	}
     	    	
-    	
+       	app.addCourseData();
+    	app.addMajorData();
     	       
-        //app.sInsert("Ted Willis","474 Mayflower Avenue Bemidji, MN 56601","Astronomy","Natural Sciences","3532","2021 Fall: COMM1A: A, 2022 Winter: COMM1B: A, 2022 Spring: COMM1C: A, 2022 Fall: ASTR1: IP","2803084");
-        
+                
         //use to reset students table 
     	//app.sDeleteAll();
     	
         //app.sSelectAll();
-    	
-    	//app.addCourseData();
-    	app.addMajorData();
-        
-        
+       	            
     }
 
 }
