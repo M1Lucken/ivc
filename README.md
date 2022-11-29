@@ -1,6 +1,16 @@
-# ivc
-174A JDBC
+# Isla Vista College
+A command-line interface and database system for students and 
+faculty for a fictional university in Isla Vista, CA. 
+Implemented with Java & SQLite using JDBC. 
 
-An interface and database system for students, faculty, 
-and courses for "Isla Vista College". Implemented with 
-Java & SQLite [JDBC]. 
+# Setup
+
+Install SQLite3
+
+Install JAVA
+
+Download the latest JDBC driver
+
+Create the ivc database
+
+# Usage
