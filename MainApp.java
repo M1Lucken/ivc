@@ -782,15 +782,16 @@ public class MainApp {
     }
     	
     	for(int i = 0; i < rs2; i++) {
-    		String sql2 = "SELECT name, perm FROM students";
+    		String sql2 = "SELECT name, perm, taken FROM students";
         	try (Connection conn = this.connect();
                     Statement stmt  = conn.createStatement();
                     ResultSet rs    = stmt.executeQuery(sql)){
         		
         		while(rs.next()) {
         			String perm = null;
-        			System.out.println("Generating grade email for " + rs.getString("name"));
-        					perm = rs.getString("perm");
+        			System.out.print("\n");
+        			System.out.println("Generating grade email for " + rs.getString("taken"));
+        			perm = rs.getString("perm");
         					
         		}  
         	
@@ -804,18 +805,119 @@ public class MainApp {
     	
     }
     
-    public void reqCheck(){
-    	System.out.println("Requirements check goes here");
+    //GOLD use
+    public void reqCheck(String permNumber){
+    	String sql = "SELECT major, taken FROM students WHERE perm = " + permNumber;
+        String taken_courses = "";
+        String[] Courses = null;
+        String Major = "";
+        
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql)){
+              
+                while(rs.next()) { // Note there will only be one result
+                    Major = rs.getString("major");
+                    String s = rs.getString("taken");
+                    taken_courses = s.replace("\"", ""); // Remove the quotes
+                    Courses = taken_courses.split(", ");
+                }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+
+        List<String> courses = new ArrayList<String>();
+        for(int i = 0; i < Courses.length; i++){
+            String[] info = Courses[i].split(": ");
+            if(info.length == 3){
+                courses.add(info[1].replaceAll("\\s+", ""));
+            }
+            else{ // info.length == 2
+                courses.add(info[0].replaceAll("\\s+", ""));
+            }
+        }
+
+        
+
+        String sql2 = "SELECT mandatory, electives, min FROM majors WHERE mname = \"" + Major + "\"";
+
+        String mcourses = "";
+        String[] mandatory_courses = null;
+        String electives = "";
+        String[] elective_courses = null;
+        int minimum = 0;
+
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql2)){
+
+                while(rs.next()) {
+                    String s = rs.getString("mandatory");
+                    mcourses = s.replace("\"", ""); // Remove the quotes
+                    mandatory_courses = mcourses.split(", ");
+                    
+
+                    s = rs.getString("electives");
+                    electives = s.replace("\"", "");
+                    elective_courses = electives.split(", ");
+                    
+
+                    minimum = rs.getInt("min");
+                }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        List<String> mandatoryCoursesToComplete = new ArrayList<String>();
+        for(int i = 0; i < mandatory_courses.length; i++){
+            if(courses.contains(mandatory_courses[i])){
+                // Do nothing.
+            }
+            else{
+                mandatoryCoursesToComplete.add(mandatory_courses[i]);
+            }
+        }
+
+        int counter = minimum;
+        for(int i = 0; i < elective_courses.length; i++){
+            if(courses.contains(elective_courses[i])){
+                counter--;
+            }
+        }
+
+        System.out.println("");
+        if(mandatoryCoursesToComplete.size() == 0 && counter <= 0){
+            System.out.println("Yes");
+        }
+        else{
+            System.out.println("List of mandatory courses to complete:");
+            for(int i = 0; i < mandatoryCoursesToComplete.size(); i++){
+                System.out.println(mandatoryCoursesToComplete.get(i));
+            }
+            System.out.println("Number of electives to complete:");
+            if(counter <= 0){
+                System.out.println(0);
+            }
+            else{
+                System.out.println(counter);
+            }
+        }
     }
     
+    //registrar use
     public void requestTranscript(){
     	System.out.println("Transcript for student goes here");
     }
     
+    //registrar use
     public void enterGrades(){
     	System.out.println("Enter grades prompt goes here");
     }
     
+    //GOLD use
     public void makePlan(){
     	System.out.println("Study plan goes here");
     }
@@ -887,7 +989,7 @@ public class MainApp {
     					break;
     				case 5:
     					System.out.print("\nRequirements check");
-    					app.reqCheck();
+    					app.reqCheck(perm);
     					break;
     				case 6:
     					System.out.print("\nMake a study plan");
