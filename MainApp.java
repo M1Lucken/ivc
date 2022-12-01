@@ -806,14 +806,18 @@ public class MainApp {
         }
 
 
-        List<String> courses = new ArrayList<String>();
+        List<String> completed_courses = new ArrayList<String>();
         for(int i = 0; i < Courses.length; i++){
             String[] info = Courses[i].split(": ");
             if(info.length == 3){
-                courses.add(info[1].replaceAll("\\s+", ""));
+                if(!info[2].contains("D") && !info[2].contains("F")){
+                    completed_courses.add(info[1].replaceAll("\\s+", ""));
+                }
             }
             else{ // info.length == 2
-                courses.add(info[0].replaceAll("\\s+", ""));
+                if(!info[1].contains("D") && !info[1].contains("F")){
+                    completed_courses.add(info[0].replaceAll("\\s+", ""));
+                }
             }
         }
 
@@ -851,7 +855,7 @@ public class MainApp {
 
         List<String> mandatoryCoursesToComplete = new ArrayList<String>();
         for(int i = 0; i < mandatory_courses.length; i++){
-            if(courses.contains(mandatory_courses[i])){
+            if(completed_courses.contains(mandatory_courses[i])){
                 // Do nothing.
             }
             else{
@@ -861,7 +865,7 @@ public class MainApp {
 
         int counter = minimum;
         for(int i = 0; i < elective_courses.length; i++){
-            if(courses.contains(elective_courses[i])){
+            if(completed_courses.contains(elective_courses[i])){
                 counter--;
             }
         }
