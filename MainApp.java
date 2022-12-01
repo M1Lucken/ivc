@@ -54,37 +54,7 @@ public class MainApp {
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
-    }
-    
-   
-    /**
-     * basic select query
-     
-    public void getPermGreaterThan(int perm){
-               String sql = "SELECT perm, name, major "
-                          + "FROM students WHERE perm > ?";
-        
-        try (Connection conn = this.connect();
-             
-        		PreparedStatement pstmt  = conn.prepareStatement(sql)){
-            
-            // set the value
-            pstmt.setInt(1,perm);
-            //
-            ResultSet rs  = pstmt.executeQuery();
-            
-            // loop through the result set
-            while (rs.next()) {
-                System.out.println(rs.getInt("perm") +  "\t" + 
-                                   rs.getString("name") + "\t" +
-                                   rs.getString("major"));
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-    */
-    
+    }    
     
     public void sInsert(String name, String address, String major, String dept, String pin, String taken, String perm) {
         String sql = "INSERT INTO students(name,address,major,dept,pin,taken,perm) VALUES(?,?,?,?,?,?,?)";
@@ -146,6 +116,31 @@ public class MainApp {
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
+    }
+    
+    public void resetTables() {
+    	String sql = "DELETE FROM students";
+    	try (Connection conn = this.connect();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+    		pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    	String sql2 = "DELETE FROM majors";
+    	try (Connection conn = this.connect();
+                PreparedStatement pstmt = conn.prepareStatement(sql2)) {
+    		pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    	String sql3 = "DELETE FROM courses";
+    	try (Connection conn = this.connect();
+                PreparedStatement pstmt = conn.prepareStatement(sql3)) {
+    		pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    	
     }
     
     public void addCourseData() {
@@ -226,6 +221,76 @@ public class MainApp {
     	
     }
     
+    public void addStudentData() {
+    	String splitBy = ",";
+    	int split = 0;
+    	int check = 0;  
+    	
+    	try {
+       	BufferedReader reader = new BufferedReader(new FileReader("StudentRoster.csv"));
+    	List<String> lines = new ArrayList<>();
+    	String line = null;
+    	int listCount = 0;
+    	while ((line = reader.readLine()) != null) {
+    	 	if(!line.contains("Student Name")) lines.add(line);
+    	 	listCount++;
+    	}    	
+    		
+    	
+       	for(int i = 0; i < listCount-1; i++) {
+    		String[] insertVal = new String[7];
+        	int ctr = 0;    		
+    		String[] student = lines.get(i).split(splitBy);    		
+    		for(int j = 0; j < student.length; j++) {
+    			
+    			if(student[j].contains("\"")) {    				
+    				 for(int k = j+1; k < student.length; k++) {
+    					if(k < student.length) student[j] = student[j].concat(",");
+    					student[j] = student[j].concat(student[k]);    					
+    					split++;    					
+    					if(student[k].contains("\"")) check = 1;
+    					if(check == 1) break;
+    				 }
+    			}
+    			
+    			insertVal[ctr] = student[j];
+    			ctr++;    			
+    			j = j + split;
+    			split = 0;
+    			check = 0;
+    			
+    		}
+    		
+    		for(int c = 0; c < 7; c++) {
+    			//if(insertVal != null) System.out.println(insertVal[c] + "\t");
+    		}
+    		
+    		//insert student roster into ivc.db via esql
+    		//app.sInsert(insertVal[0],insertVal[1],insertVal[2],insertVal[3],insertVal[4],insertVal[5],insertVal[6]);
+    		//replaced ^ with this method to follow other table insert syntax
+    		String sql = "INSERT INTO students(name,address,major,dept,pin,taken,perm) VALUES(?,?,?,?,?,?,?)";
+
+            try (Connection conn = this.connect();
+                    PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            	pstmt.setString(1, insertVal[0]); //name
+            	pstmt.setString(2, insertVal[1]); //address
+                pstmt.setString(3, insertVal[2]); //major
+                pstmt.setString(4, insertVal[3]); //department
+                pstmt.setString(5, insertVal[4]); //pin
+                pstmt.setString(6, insertVal[5]); //taken
+                pstmt.setString(7, insertVal[6]); //perm
+                pstmt.executeUpdate();
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
+            }
+    		
+       	}	
+    	} catch (Exception b) {
+    		b.printStackTrace();
+    	}
+    	
+    }
+    
 
     public void addMajorData() {
     	String splitBy = ",";
@@ -250,7 +315,7 @@ public class MainApp {
     			if(major[j].contains("\"")) {   				
     				
     				 for(int k = j+1; k < major.length; k++) {
-    					if(k < major.length - 1) major[j] = major[j].concat(",");     					
+    					if(k < major.length) major[j] = major[j].concat(",");     					
     					major[j] = major[j].concat(major[k]);
     					//major[j] = major[j].substring(0,major[j].length()-1);
     					
@@ -272,7 +337,7 @@ public class MainApp {
     		for(int c = 0; c < 5; c++) {
     			//if(insertVal != null) System.out.println(insertVal[c] + "\t");
     		} 
-    		String sql = "INSERT INTO majors(mname,dname,mandatory,electives,min) VALUES(?,?,?,?,?)";
+    		String sql = "INSERT INTO majors(qyear,mname,mandatory,electives,min) VALUES(?,?,?,?,?)";
 
             try (Connection conn = this.connect();
                     PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -650,12 +715,116 @@ public class MainApp {
 
     }
     
+    public void generateStudentListForCourse(String enrollCode){
+
+        String s1 = "";
+        String s2 = "";
+
+        String sql = "SELECT qyear, cnum FROM courses WHERE enroll = " + enrollCode;
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql)){
+              
+                while(rs.next()) { 
+                    s1 = rs.getString("qyear");
+                    s2 = rs.getString("cnum");
+                }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        String temp = s1 + ": " + s2 + ":";
+
+        String sql2 = "SELECT name, taken FROM students";
+        String taken_courses = "";
+        String n = "";
+        String[] Courses = null;
+        List<String> students = new ArrayList<String>();
+
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql2)){
+              
+                while(rs.next()) { // Note there will only be one result
+                    n = rs.getString("name");
+                    taken_courses = rs.getString("taken");
+                    if(taken_courses.contains(temp)){ // This line determines which values I pick.
+                        students.add(n);
+                    }
+                }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        System.out.println("");
+        for(int i = 0; i < students.size(); i++){
+            System.out.println(students.get(i));
+            System.out.println("");
+        }
+    }
     
+    public void emailEveryone() {
+    	
+    	int rs2 = 0;
+      	String sql = "SELECT COUNT(*) FROM students";
+    	try (Connection conn = this.connect();
+                Statement stmt  = conn.createStatement();
+                ResultSet rs    = stmt.executeQuery(sql)){
+    			
+    		//rs.getInt()
+    		rs.next();
+    	    rs2 = rs.getInt(1);
+    	    
+     	}catch(SQLException e){
+    		System.out.println(e.getMessage());
+    }
+    	
+    	for(int i = 0; i < rs2; i++) {
+    		String sql2 = "SELECT name, perm FROM students";
+        	try (Connection conn = this.connect();
+                    Statement stmt  = conn.createStatement();
+                    ResultSet rs    = stmt.executeQuery(sql)){
+        		
+        		while(rs.next()) {
+        			String perm = null;
+        			System.out.println("Generating grade email for " + rs.getString("name"));
+        					perm = rs.getString("perm");
+        					
+        		}  
+        	
+        	} catch (SQLException e) {
+	            System.out.println(e.getMessage());   			        
+        	
+        	}
+    	
+    	}
+    	String[] perms = new String[rs2];
+    	
+    }
+    
+    public void reqCheck(){
+    	System.out.println("Requirements check goes here");
+    }
+    
+    public void requestTranscript(){
+    	System.out.println("Transcript for student goes here");
+    }
+    
+    public void enterGrades(){
+    	System.out.println("Enter grades prompt goes here");
+    }
+    
+    public void makePlan(){
+    	System.out.println("Study plan goes here");
+    }
+        
     public static void main(String[] args) throws Exception {
-    	System.out.println("Starting main application for IVC DBMS...\n\n");
+    	System.out.println("Starting main application for IVC DBMS...\n\n");   	    	
     	
-    	MainApp app = new MainApp();
-    	
+    	MainApp app = new MainApp();    	
+       	
     	System.out.print("<<< SELECT INTERFACE >>>\n");    	
     	System.out.print("Enter \"g\" for GOLD, \"r\" for Registrar: ");    	
     	String inter = System.console().readLine();
@@ -710,8 +879,7 @@ public class MainApp {
     					break;
     				case 3:
     					System.out.print("\nCurrently enrolled courses: \n");
-    					app.generateCourseListing(perm);
-    					
+    					app.generateCourseListing(perm);    					
     					break;
     				case 4:
     					System.out.print("\nList grades from last quarter");    					
@@ -719,11 +887,11 @@ public class MainApp {
     					break;
     				case 5:
     					System.out.print("\nRequirements check");
-    					
+    					app.reqCheck();
     					break;
     				case 6:
     					System.out.print("\nMake a study plan");
-    					
+    					app.makePlan();
     					break;
     				case 7:
     					System.out.print("\nEnter new PIN: ");
@@ -741,7 +909,7 @@ public class MainApp {
     				while(true) {
     				System.out.print("\nOPERATIONS\n");
     				System.out.print("0 | Exit Registrar \n1 | Add student to course \n2 | Drop student from course \n3 | List all courses a student has taken\n4 | List student grades from "
-    						+ "previous quarter\n5 | Generate class list\n6 | Enter course grades\n7 | Print student transcript\n8 | Generate grade mailer for all students\n");
+    						+ "previous quarter\n5 | Generate class list\n6 | Enter course grades\n7 | Print student transcript\n8 | Generate grade mailer for all students\n9 | Load course, major, student data from CSV\n10 | Delete all database data\n");
     				System.out.print("Choose the operation desired by entering its corresponding number from the list above: ");
     				int choice2 = Integer.valueOf(System.console().readLine());
     				switch(choice2) {
@@ -773,20 +941,32 @@ public class MainApp {
     					app.previousQuarterGrades(sPerm); 				
     					break;
     				case 5:
-    					System.out.print("\nEnter perm number of student to generate class list: ");
-    					
+    					System.out.print("\nEnter enroll code of course to generate class list: ");
+    					enrollcode = System.console().readLine();
+    					app.generateStudentListForCourse(enrollcode);
     					break;
     				case 6:
     					System.out.print("\nEnter enroll code for class to add grades to: ");
     					System.out.print("\nEnter file name: ");
-    					
+    					app.enterGrades();
     					break;
     				case 7:
-    					System.out.print("\nEnter perm number of student to print transcript for: ");    					
+    					System.out.print("\nEnter perm number of student to print transcript for: ");
+    					app.requestTranscript();
     					break;
     				case 8:
-    					System.out.print("\nEmail everyone their grades!");
+    					System.out.print("\nEmailing everyone their grades!");
+    					app.emailEveryone();
     					break; 
+    				case 9:
+    					System.out.print("\nLoading course, major, and student data into database...");
+    					app.addMajorData();
+    			      	app.addCourseData();
+    			      	app.addStudentData();
+    			      	break;
+    				case 10:
+    					System.out.print("\nDeleting course, major, and student data from database...");
+    					app.resetTables();
     				}
     				System.out.print("\n<<--------------------------------------------------->>\n");
     				}
@@ -798,64 +978,7 @@ public class MainApp {
     		System.out.print("Invalid Input");
     		System.exit(0);
     	}
-    	*/    	   	
-    	
-    	BufferedReader reader = new BufferedReader(new FileReader("StudentRoster.csv"));
-    	List<String> lines = new ArrayList<>();
-    	String line = null;
-    	int listCount = 0;
-    	while ((line = reader.readLine()) != null) {
-    	 	if(!line.contains("Student Name")) lines.add(line);
-    	 	listCount++;
-    	}    	
-    	String splitBy = ",";
-    	int split = 0;
-    	int check = 0;  	
-    	
-       	for(int i = 0; i < listCount-1; i++) {
-    		String[] insertVal = new String[7];
-        	int ctr = 0;    		
-    		String[] student = lines.get(i).split(splitBy);    		
-    		for(int j = 0; j < student.length; j++) {
-    			
-    			if(student[j].contains("\"")) {    				
-    				 for(int k = j+1; k < student.length; k++) {
-    					if(k < student.length - 1) student[j] = student[j].concat(",");
-    					student[j] = student[j].concat(student[k]);    					
-    					split++;    					
-    					if(student[k].contains("\"")) check = 1;
-    					if(check == 1) break;
-    				 }
-    			}
-    			
-    			insertVal[ctr] = student[j];
-    			ctr++;    			
-    			j = j + split;
-    			split = 0;
-    			check = 0;
-    			
-    		}
-    		
-    		for(int c = 0; c < 7; c++) {
-    			//if(insertVal != null) System.out.println(insertVal[c] + "\t");
-    		}
-    		
-    		//insert student roster into ivc.db via esql
-    		//app.sInsert(insertVal[0],insertVal[1],insertVal[2],insertVal[3],insertVal[4],insertVal[5],insertVal[6]);
-    		
-    	}
-    	    	
-       	//app.addCourseData();
-    	//app.addMajorData();
-    	       
-                
-        //use to reset students table 
-    	//app.sDeleteAll();
-    	
-        //app.sSelectAll();
-       	//String permy = "2582545";
-       	//System.out.print("\nCurrent courses " + permy + " is taking is " + app.currCourseNum(permy) + "\n");
-       	            
+    	*/        
     }
 
 }
