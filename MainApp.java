@@ -766,43 +766,21 @@ public class MainApp {
     }
     
     public void emailEveryone() {
-    	
-    	int rs2 = 0;
-      	String sql = "SELECT COUNT(*) FROM students";
-    	try (Connection conn = this.connect();
-                Statement stmt  = conn.createStatement();
-                ResultSet rs    = stmt.executeQuery(sql)){
-    			
-    		//rs.getInt()
-    		rs.next();
-    	    rs2 = rs.getInt(1);
-    	    
-     	}catch(SQLException e){
-    		System.out.println(e.getMessage());
-    }
-    	
-    	for(int i = 0; i < rs2; i++) {
-    		String sql2 = "SELECT name, perm, taken FROM students";
-        	try (Connection conn = this.connect();
-                    Statement stmt  = conn.createStatement();
-                    ResultSet rs    = stmt.executeQuery(sql)){
-        		
-        		while(rs.next()) {
-        			String perm = null;
-        			System.out.print("\n");
-        			System.out.println("Generating grade email for " + rs.getString("taken"));
-        			perm = rs.getString("perm");
-        					
-        		}  
-        	
-        	} catch (SQLException e) {
-	            System.out.println(e.getMessage());   			        
-        	
-        	}
-    	
-    	}
-    	String[] perms = new String[rs2];
-    	
+    	String sql = "SELECT perm, name, taken FROM students";
+        
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql)){
+            
+            // loop through the result set
+            while (rs.next()) {
+                System.out.println("TO: " + rs.getString("name") + "@ucsb.edu\t" +
+                                   "BODY: " + rs.getString("taken") + "\t" +
+                                   "Perm Number: " + rs.getString("perm"));
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
     }
     
     //GOLD use
@@ -908,8 +886,27 @@ public class MainApp {
     }
     
     //registrar use
-    public void requestTranscript(){
-    	System.out.println("Transcript for student goes here");
+    public void requestTranscript(String permNumber){
+    	String sql = "SELECT name, taken FROM students WHERE perm = " + permNumber;
+        String name = "";
+        String taken_courses = "";
+        
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql)){
+              
+                while(rs.next()) { // Note there will only be one result
+                    name = rs.getString("name");
+                    String s = rs.getString("taken");
+                    taken_courses = s.replace("\"", ""); // Remove the quotes
+                }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        System.out.println("Transcript for " + name + ":");
+        System.out.println(taken_courses);
     }
     
     //registrar use
@@ -1054,10 +1051,11 @@ public class MainApp {
     					break;
     				case 7:
     					System.out.print("\nEnter perm number of student to print transcript for: ");
-    					app.requestTranscript();
+    					sPerm = System.console().readLine();
+    					app.requestTranscript(sPerm);
     					break;
     				case 8:
-    					System.out.print("\nEmailing everyone their grades!");
+    					System.out.print("\nEmailing everyone their grades!\n");
     					app.emailEveryone();
     					break; 
     				case 9:
