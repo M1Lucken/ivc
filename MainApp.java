@@ -557,7 +557,10 @@ public class MainApp {
     }
     
     public void changePin(String perm, String newP) {
-    	if(!(perm.length() == 4)) return;
+    	if(!(newP.length() == 4)) {
+    		System.out.print("Incorrect PIN length: must be 4 digits.\n");
+    		return;
+    	}
     	String sql = "UPDATE students SET pin = ?"
     			+ "WHERE perm = ?";
     	    	   	
@@ -637,6 +640,10 @@ public class MainApp {
 			System.out.print("Already enrolled in five courses currently!");
 			return;
 		}
+    	if(!qyear.equals("2022 Fall")) {
+    		System.out.print("Cannot add a course to schedule that is not in the current quarter!\n");
+    		return;
+    	}
     	
     	if(taken.contains(cnum)){
 			System.out.print("Cannot add course you've already enrolled in!");
