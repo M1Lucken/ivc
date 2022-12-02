@@ -14,3 +14,5 @@ Download the latest JDBC driver
 Create the ivc database
 
 # Usage
+
+java -cp ".;sqlite-jdbc-3.40.0.0.jar" net.sqlitetutorial.MainApp
