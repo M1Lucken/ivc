@@ -11,6 +11,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.FileReader;  
 import java.util.*;
+import java.io.File;
+import java.io.FileNotFoundException;
 
 
 
@@ -227,7 +229,8 @@ public class MainApp {
     	int check = 0;  
     	
     	try {
-       	BufferedReader reader = new BufferedReader(new FileReader("StudentRoster.csv"));
+    	//load student roster csv	
+      	BufferedReader reader = new BufferedReader(new FileReader("StudentRoster.csv"));
     	List<String> lines = new ArrayList<>();
     	String line = null;
     	int listCount = 0;
@@ -235,15 +238,17 @@ public class MainApp {
     	 	if(!line.contains("Student Name")) lines.add(line);
     	 	listCount++;
     	}    	
-    		
+    	//add all tuples to lines array	
     	
        	for(int i = 0; i < listCount-1; i++) {
+       		//insertVal will be new array that contains each attribute in separate indexes
     		String[] insertVal = new String[7];
         	int ctr = 0;    		
     		String[] student = lines.get(i).split(splitBy);    		
     		for(int j = 0; j < student.length; j++) {
     			
-    			if(student[j].contains("\"")) {    				
+    			if(student[j].contains("\"")) {  
+    				//readd commas for attributes that are a LIST
     				 for(int k = j+1; k < student.length; k++) {
     					if(k < student.length) student[j] = student[j].concat(",");
     					student[j] = student[j].concat(student[k]);    					
@@ -277,7 +282,12 @@ public class MainApp {
                 pstmt.setString(3, insertVal[2]); //major
                 pstmt.setString(4, insertVal[3]); //department
                 pstmt.setString(5, insertVal[4]); //pin
+                
+                //make sure all last tuple containing current courses (IP) have qyear before each cnum
+                String oldT = insertVal[5];
+                
                 pstmt.setString(6, insertVal[5]); //taken
+                
                 pstmt.setString(7, insertVal[6]); //perm
                 pstmt.executeUpdate();
             } catch (SQLException e) {
@@ -377,7 +387,7 @@ public class MainApp {
     
     
     public void generateCourseListing(String permNumber){
-        String sql = "SELECT taken FROM students WHERE perm = " + permNumber;
+    	String sql = "SELECT taken FROM students WHERE perm = " + permNumber;
         String taken_courses = "";
         String[] Courses = null;
 
@@ -397,7 +407,7 @@ public class MainApp {
 
         int counter = 0;
         for(int i = 0; i < Courses.length; i++){
-            if(Courses[i].contains(": IP")){
+            if(Courses[i].contains("2022 Fall:")){
                 counter++;
             }
         }
@@ -405,7 +415,7 @@ public class MainApp {
         int counter2 = 0;
         String str = "";
         for(int i = 0; i < Courses.length; i++){
-            if(Courses[i].contains(": IP")){
+            if(Courses[i].contains("2022 Fall:")){
                 str += Courses[i];
                 counter2++;
                 if(counter2 != counter){
@@ -716,25 +726,24 @@ public class MainApp {
     }
     
     public void generateStudentListForCourse(String enrollCode){
+    	String sql = "SELECT cnum, qyear FROM courses WHERE enroll = " + enrollCode;
+        String cnum= "";
+        String qyear = "";
 
-        String s1 = "";
-        String s2 = "";
-
-        String sql = "SELECT qyear, cnum FROM courses WHERE enroll = " + enrollCode;
         try (Connection conn = this.connect();
              Statement stmt  = conn.createStatement();
              ResultSet rs    = stmt.executeQuery(sql)){
-              
-                while(rs.next()) { 
-                    s1 = rs.getString("qyear");
-                    s2 = rs.getString("cnum");
+             
+                while(rs.next()) {
+                    qyear = rs.getString("qyear");
+                    cnum = rs.getString("cnum");
                 }
              }
         catch (SQLException e) {
             System.out.println(e.getMessage());
         }
 
-        String temp = s1 + ": " + s2 + ":";
+        String temp = qyear + ": " + cnum + ":";
 
         String sql2 = "SELECT name, taken FROM students";
         String taken_courses = "";
@@ -745,11 +754,11 @@ public class MainApp {
         try (Connection conn = this.connect();
              Statement stmt  = conn.createStatement();
              ResultSet rs    = stmt.executeQuery(sql2)){
-              
+             
                 while(rs.next()) { // Note there will only be one result
                     n = rs.getString("name");
                     taken_courses = rs.getString("taken");
-                    if(taken_courses.contains(temp)){ // This line determines which values I pick.
+                    if(taken_courses.contains(temp)){
                         students.add(n);
                     }
                 }
@@ -763,6 +772,7 @@ public class MainApp {
             System.out.println(students.get(i));
             System.out.println("");
         }
+        
     }
     
     public void emailEveryone() {
@@ -820,73 +830,6 @@ public class MainApp {
                 }
             }
         }
-
-        
-
-        String sql2 = "SELECT mandatory, electives, min FROM majors WHERE mname = \"" + Major + "\"";
-
-        String mcourses = "";
-        String[] mandatory_courses = null;
-        String electives = "";
-        String[] elective_courses = null;
-        int minimum = 0;
-
-        try (Connection conn = this.connect();
-             Statement stmt  = conn.createStatement();
-             ResultSet rs    = stmt.executeQuery(sql2)){
-
-                while(rs.next()) {
-                    String s = rs.getString("mandatory");
-                    mcourses = s.replace("\"", ""); // Remove the quotes
-                    mandatory_courses = mcourses.split(", ");
-                    
-
-                    s = rs.getString("electives");
-                    electives = s.replace("\"", "");
-                    elective_courses = electives.split(", ");
-                    
-
-                    minimum = rs.getInt("min");
-                }
-             }
-        catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-
-        List<String> mandatoryCoursesToComplete = new ArrayList<String>();
-        for(int i = 0; i < mandatory_courses.length; i++){
-            if(completed_courses.contains(mandatory_courses[i])){
-                // Do nothing.
-            }
-            else{
-                mandatoryCoursesToComplete.add(mandatory_courses[i]);
-            }
-        }
-
-        int counter = minimum;
-        for(int i = 0; i < elective_courses.length; i++){
-            if(completed_courses.contains(elective_courses[i])){
-                counter--;
-            }
-        }
-
-        System.out.println("");
-        if(mandatoryCoursesToComplete.size() == 0 && counter <= 0){
-            System.out.println("Yes");
-        }
-        else{
-            System.out.println("List of mandatory courses to complete:");
-            for(int i = 0; i < mandatoryCoursesToComplete.size(); i++){
-                System.out.println(mandatoryCoursesToComplete.get(i));
-            }
-            System.out.println("Number of electives to complete:");
-            if(counter <= 0){
-                System.out.println(0);
-            }
-            else{
-                System.out.println(counter);
-            }
-        }
     }
     
     //registrar use
@@ -914,13 +857,227 @@ public class MainApp {
     }
     
     //registrar use
-    public void enterGrades(){
-    	System.out.println("Enter grades prompt goes here");
+    public void enterGrades(String file){
+    	File f = new File(file);
+        String[] parse = null;
+        String permNumber = "";
+        String enrollCode = "";
+        String grade = "";
+        try{
+            Scanner s = new Scanner(f);
+            while(s.hasNextLine()){
+                parse = s.nextLine().split(" ");
+                permNumber = parse[0];
+                enrollCode = parse[1];
+                grade = parse[2];
+               
+                // SQL Stuff Below:
+
+                String sql = "SELECT cnum, qyear FROM courses WHERE enroll = " + enrollCode;
+                String cnum= "";
+                String qyear = "";
+
+                try (Connection conn = this.connect();
+                    Statement stmt  = conn.createStatement();
+                    ResultSet rs    = stmt.executeQuery(sql)){
+                   
+                        while(rs.next()) {
+                            qyear = rs.getString("qyear");
+                            cnum = rs.getString("cnum");
+                        }
+                    }
+                catch (SQLException e) {
+                    System.out.println(e.getMessage());
+                }
+
+                String temp = qyear + ": " + cnum + ":";
+
+                String sql2 = "SELECT taken FROM students WHERE perm = " + permNumber;
+                String taken_courses = "";
+                String[] Courses = null;
+                List<String> students = new ArrayList<String>();
+
+                try (Connection conn = this.connect();
+                    Statement stmt  = conn.createStatement();
+                    ResultSet rs    = stmt.executeQuery(sql2)){
+                   
+                        while(rs.next()) {
+                            taken_courses = rs.getString("taken");
+                            taken_courses = taken_courses.replace("\"", "");
+                            Courses = taken_courses.split(", ");
+                        }
+                    }
+                catch (SQLException e) {
+                    System.out.println(e.getMessage());
+                }
+
+                String temp2 = "\"";
+                for(int i = 0; i < Courses.length; i++){
+                    String[] info = Courses[i].split(": ");
+                    temp2 += info[0] + ": " + info[1] + ": ";
+                    if(info[0].equals(qyear) && info[1].equals(cnum)){
+                        temp2 += grade;
+                    }
+                    else{
+                        temp2 += info[2];
+                    }
+                    if(i != Courses.length - 1){
+                        temp2 += ", ";
+                    }
+                }
+                temp2 += "\"";
+
+                // Finally, update the students table with the new taken courses string (temp2)
+               
+                String sql3 = "UPDATE students SET taken = ?" + "WHERE perm = ?";
+                try (Connection conn = this.connect();
+                    PreparedStatement pstmt = conn.prepareStatement(sql3)){
+                    pstmt.setString(1, temp2);
+                    pstmt.setString(2, permNumber);
+                   
+                    pstmt.executeUpdate();
+
+                } catch (SQLException e) {
+                    System.out.println(e.getMessage());
+                }
+
+            }
+            s.close();
+        }
+        catch(FileNotFoundException e){
+            System.out.println("File not found...");
+        }
     }
     
     //GOLD use
-    public void makePlan(){
-    	System.out.println("Study plan goes here");
+    public void makePlan(String permno){
+    	//get name, major, taken courses for student, save to fields below
+    	String sCourses[] = null;
+    	String sMajor = "";
+    	String sName = "";
+    	String taken = "";
+    	String sql = "SELECT name,major,taken FROM students WHERE perm = ?";
+    	try (Connection conn = this.connect();    			
+    			PreparedStatement pstmt  = conn.prepareStatement(sql)){    		
+    		pstmt.setString(1,permno);
+    		ResultSet rs  = pstmt.executeQuery();
+    		sName = rs.getString("name");
+    		sMajor = rs.getString("major");
+    		taken = rs.getString("taken");
+    		String tempTaken = rs.getString("taken");
+    		tempTaken = tempTaken.replace("\"", "");
+    		sCourses = tempTaken.split(", ");
+    	
+    	}	catch (SQLException e) {
+        	System.out.println(e.getMessage());
+    	}
+    	//get mandatory courses, elective list, elective number minimum
+    	String[] sMand = null;
+    	String[] sElect = null;
+    	int sMin = 0;
+    	String sql2 = "SELECT mandatory,electives,min FROM majors WHERE mname = ?";
+    	try (Connection conn = this.connect();    			
+    			PreparedStatement pstmt  = conn.prepareStatement(sql2)){    		
+    		pstmt.setString(1,sMajor);
+    		ResultSet rs  = pstmt.executeQuery();
+    		String tempMand = rs.getString("mandatory");
+    		tempMand = tempMand.replace("\"", "");
+    		sMand = tempMand.split(", ");
+    		String tempElect = rs.getString("electives");
+    		tempElect = tempElect.replace("\"", "");
+    		sElect = tempElect.split(", ");
+    		sMin = rs.getInt("min");
+    	
+    	}	catch (SQLException e) {
+        	System.out.println(e.getMessage());
+    	}
+    	//leftMand iterable array that contains all sMand[] values
+    	List<String> leftMand = new ArrayList<String>();
+    	List<String> takenElect = new ArrayList<String>();
+    	for(int i = 0; i < sMand.length; i++) {
+    		leftMand.add(sMand[i]);
+    	}
+    	
+    	for(int i = 0; i < sCourses.length; i++) {
+    		//split each course into 3 tuple in course: qyear, cnum, grade 
+    		String[] course = sCourses[i].split(": ");
+    		//loop through mandatory courses, if in sMand, remove from leftMand[]
+    		for(int j = 0; j < leftMand.size(); j++) {
+    			if(course[1].equals(leftMand.get(j))) {
+    				//has taken course, check grade not D or F
+    				if(!course[2].contains("D") && !course[2].contains("F")) leftMand.remove(leftMand.get(j));
+    			}
+    		}
+    		//loop through elective list, if student taken & passed, reduce sMin by 1
+    		for(int k = 0; k < sElect.length; k++) {
+    			if(course[1].equals(sElect[k])) {
+    				if(!course[2].contains("D") && !course[2].contains("F")) {
+    					sMin--;
+    					takenElect.add(course[2]);
+    				}
+    			}
+    		}
+    	}
+    	String quarters[] = new String[]{"2023 Winter", "2023 Spring", "2023 Fall", "2024 Winter", "2024 Spring", "2024 Fall", "2025 Winter", "2025 Spring", "2025 Fall"};
+    	int currQ = 0;
+    	List<String> plan = new ArrayList<String>();
+    	while(leftMand.size() > 0 || sMin > 0) {
+    		//while not met all requirements, iterate through quarters starting from next q
+    		//list up to 5 mandatory courses offered that q
+    		//if less than 5 selected, add 5-(added courses) non-taken electives 
+    		String quarter = quarters[currQ];
+    		int addedCourses = 0;
+    		boolean mandAvail = true;
+    		boolean electAvail = true;
+    		while(addedCourses < 5 && mandAvail) {
+    			//SELECT courses in quarter that are in leftMand array which prereq is satisfied
+    			//increment addedCourses, remove course from leftMand, add to sched
+    			//if no course available, set mandAvail to FALSE
+    			String sql1 = "SELECT cnum, enroll, prereq FROM courses WHERE qyear = " + quarter;
+    			try (Connection conn = this.connect();    			
+    	    		Statement stmt = conn.createStatement();	
+    	    		ResultSet rs  = stmt.executeQuery(sql1)){
+    	    			
+    	    		while(rs.next()) {
+    	    			//get prereq for course, make sure theyve taken to potentially add to plan
+    	    			String prereq = rs.getString("prereq");
+    	    			if(prereq != null) {
+    	    	    		String splitBy = ", ";
+    	    	    		String[] res = prereq.split(splitBy);
+    	    	    		int takenReq = res.length;
+    	    	    		for(int i=0; i<res.length; i++) {    		
+    	    	    			if(taken.contains(res[i])) takenReq--;
+    	    	    		}
+    	    	    		if(takenReq > 0) {
+    	    	        		//prereq not satisfied
+    	    	        		rs.next();
+    	    	        	}
+    	    			}
+    	    			for(int i = 0; i < leftMand.size(); i++) {
+    	    				if(rs.getString("cnum") == leftMand.get(i)) {
+    	    					
+    	    				}
+    	    			}
+    	    			
+    	    		}
+    			} catch (SQLException e) {
+    	            System.out.println(e.getMessage());
+    		}
+    		}
+    		
+    		while(addedCourses < 5 && electAvail && sMin > 0) {
+    			//SELECT courses in quarter that are in sElect not in takenElect
+    			//increment addedCourses, add course to takenElect, decrement sMin, add to sched
+    			//if no elective avaialble, set electAvail to FALSE
+    			
+    			//remove after mandatory courses work
+    			sMin = 0;
+    		}
+    		
+    		currQ++;
+    	}
+    	
+
     }
         
     public static void main(String[] args) throws Exception {
@@ -994,7 +1151,7 @@ public class MainApp {
     					break;
     				case 6:
     					System.out.print("\nMake a study plan");
-    					app.makePlan();
+    					app.makePlan(perm);
     					break;
     				case 7:
     					System.out.print("\nEnter new PIN: ");
@@ -1049,10 +1206,10 @@ public class MainApp {
     					app.generateStudentListForCourse(enrollcode);
     					break;
     				case 6:
-    					System.out.print("\nEnter enroll code for class to add grades to: ");
     					System.out.print("\nEnter file name: ");
-    					app.enterGrades();
-    					break;
+                        String fileName = System.console().readLine();
+                        app.enterGrades(fileName);
+                        break;
     				case 7:
     					System.out.print("\nEnter perm number of student to print transcript for: ");
     					sPerm = System.console().readLine();
