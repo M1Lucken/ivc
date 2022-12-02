@@ -444,14 +444,16 @@ public class MainApp {
                 while(rs.next()) { // Note there will only be one result
                     String s = rs.getString("taken");
                     taken_courses = s.replace("\"", ""); // Remove the quotes
-                    taken_courses = taken_courses.replace(",", "");
                 }
              }
         catch (SQLException e) {
             System.out.println(e.getMessage());
         }
 
-        String[] Courses = taken_courses.split(" ");
+        // The system should only be allowed to drop Fall 2022 courses for which grades haven't been posted.
+        // Use enroll codes instead of course numbers.
+
+        String[] Courses = taken_courses.split(", ");
        
         int counter = 0;
         for(int i = 0; i < Courses.length; i++){
@@ -460,62 +462,64 @@ public class MainApp {
             }
         }
 
-        boolean current = false;
-        String tester = enrollCode + ":";
-        if(counter >= 2){
-            int start = -1;
-            int end = -1;
-            int lastValidIndex = -1;
-            for(int i = 0; i < Courses.length; i++){
-                if(Courses[i].equals(tester)){
-                    if(i != 0 && Courses[i-1].substring(Courses[i-1].length()-1).equals(":")){
-                            // If the string before this ends in a colon then I know for a fact that it is the Year and Quarter information
-                            // for this course. If not, then it's the grade of the previous course.
-                            start = i-2;
-                    }
-                    else{
-                            start = i;
-                    }
-                    end = i + 1;
-                    if(Courses[i+1].equals("IP")){
-                        current = true;
-                    }
+        String sql2 = "SELECT cnum, qyear FROM courses WHERE enroll = " + enrollCode;
+        String cnum = "";
+        String qyear = "";
+
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql2)){
+              
+                while(rs.next()) { 
+                    cnum = rs.getString("cnum");
+                    qyear = rs.getString("qyear");
                 }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        if(!qyear.equals("2022 Fall")){
+            System.out.println("You're trying to drop a non-Fall 2022 course!");
+            return;
+        }
+
+        String s = qyear + ": " + cnum + ":";
+        if(!taken_courses.contains(s)){
+            System.out.println("This person isn't taking that course!");
+            return;
+        }
+
+        List<String> CourseList = new ArrayList<String>();
+        String temp = qyear + ": " + cnum + ": " + "IP";
+        for(int i = 0; i < Courses.length; i++){
+            if(Courses[i].equals(temp)){
+                // Do nothing
             }
-
-            lastValidIndex = Courses.length - 1;
-            if(end == Courses.length - 1){
-                lastValidIndex = start - 1;
+            else{
+                CourseList.add(Courses[i]);
             }
+        }
 
-            if(current){ // This course is a course that is being taken currently.
-                String str = "\"";
-                for(int i = 0; i < Courses.length; i++){
-                    if(i < start || i > end){
-                        str += Courses[i];
-                        if(Courses[i].length() <= 3 && i < lastValidIndex){ // This is the grade of the course and the next course starts after this
-                            str += ", ";
-                        }
-                        else if (i < lastValidIndex){
-                            str += " ";
-                        }
-                        else{}
-                    }
-                }
-                str += "\"";
-
-                String sql2 = "UPDATE students SET taken = ?" + "WHERE perm = ?";
-                try (Connection conn = this.connect();
-                    PreparedStatement pstmt = conn.prepareStatement(sql2)){
-                    pstmt.setString(1, str);
-                    pstmt.setString(2, permNumber);
-                   
-                    pstmt.executeUpdate();
-
-                } catch (SQLException e) {
-                    System.out.println(e.getMessage());
-                }
+        String newTaken = "\"";
+        for(int i = 0; i < CourseList.size(); i++){
+            newTaken += CourseList.get(i);
+            if(i != CourseList.size() - 1){
+                newTaken += ", ";
             }
+        }
+        newTaken += "\"";
+        
+        String sql3 = "UPDATE students SET taken = ?" + "WHERE perm = ?";
+        try (Connection conn = this.connect();
+            PreparedStatement pstmt = conn.prepareStatement(sql3)){
+            pstmt.setString(1, newTaken);
+            pstmt.setString(2, permNumber);
+            
+            pstmt.executeUpdate();
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
         }
     }
     
@@ -1293,7 +1297,7 @@ public class MainApp {
     					app.addCourse(perm, enrollcode);
     					break;
     				case 2:
-    					System.out.print("\nEnter course number for class to drop: ");
+    					System.out.print("\nEnter enrollment code for class to drop: ");
     					enrollcode = System.console().readLine();
     					//enrollcode var name but actually uses "cnum"
     					app.dropCourse(perm, enrollcode);
@@ -1345,7 +1349,7 @@ public class MainApp {
     					app.addCourse(sPerm, enrollcode);
     					break;
     				case 2:
-    					System.out.print("\nEnter course number for class: ");
+    					System.out.print("\nEnter enrollment code for class: ");
     					enrollcode = System.console().readLine();
     					System.out.print("\nEnter perm number of student to drop: ");
     					sPerm = System.console().readLine();
