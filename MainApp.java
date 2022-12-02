@@ -1017,135 +1017,229 @@ public class MainApp {
     }
     
     //GOLD use
-    public void makePlan(String permno){
-    	//get name, major, taken courses for student, save to fields below
-    	String sCourses[] = null;
-    	String sMajor = "";
-    	String sName = "";
-    	String taken = "";
-    	String sql = "SELECT name,major,taken FROM students WHERE perm = ?";
-    	try (Connection conn = this.connect();    			
-    			PreparedStatement pstmt  = conn.prepareStatement(sql)){    		
-    		pstmt.setString(1,permno);
-    		ResultSet rs  = pstmt.executeQuery();
-    		sName = rs.getString("name");
-    		sMajor = rs.getString("major");
-    		taken = rs.getString("taken");
-    		String tempTaken = rs.getString("taken");
-    		tempTaken = tempTaken.replace("\"", "");
-    		sCourses = tempTaken.split(", ");
-    	
-    	}	catch (SQLException e) {
-        	System.out.println(e.getMessage());
-    	}
-    	//get mandatory courses, elective list, elective number minimum
-    	String[] sMand = null;
-    	String[] sElect = null;
-    	int sMin = 0;
-    	String sql2 = "SELECT mandatory,electives,min FROM majors WHERE mname = ?";
-    	try (Connection conn = this.connect();    			
-    			PreparedStatement pstmt  = conn.prepareStatement(sql2)){    		
-    		pstmt.setString(1,sMajor);
-    		ResultSet rs  = pstmt.executeQuery();
-    		String tempMand = rs.getString("mandatory");
-    		tempMand = tempMand.replace("\"", "");
-    		sMand = tempMand.split(", ");
-    		String tempElect = rs.getString("electives");
-    		tempElect = tempElect.replace("\"", "");
-    		sElect = tempElect.split(", ");
-    		sMin = rs.getInt("min");
-    	
-    	}	catch (SQLException e) {
-        	System.out.println(e.getMessage());
-    	}
-    	//leftMand iterable array that contains all sMand[] values
-    	List<String> leftMand = new ArrayList<String>();
-    	List<String> takenElect = new ArrayList<String>();
-    	for(int i = 0; i < sMand.length; i++) {
-    		leftMand.add(sMand[i]);
-    	}
-    	
-    	for(int i = 0; i < sCourses.length; i++) {
-    		//split each course into 3 tuple in course: qyear, cnum, grade 
-    		String[] course = sCourses[i].split(": ");
-    		//loop through mandatory courses, if in sMand, remove from leftMand[]
-    		for(int j = 0; j < leftMand.size(); j++) {
-    			if(course[1].equals(leftMand.get(j))) {
-    				//has taken course, check grade not D or F
-    				if(!course[2].contains("D") && !course[2].contains("F")) leftMand.remove(leftMand.get(j));
-    			}
-    		}
-    		//loop through elective list, if student taken & passed, reduce sMin by 1
-    		for(int k = 0; k < sElect.length; k++) {
-    			if(course[1].equals(sElect[k])) {
-    				if(!course[2].contains("D") && !course[2].contains("F")) {
-    					sMin--;
-    					takenElect.add(course[2]);
-    				}
-    			}
-    		}
-    	}
-    	String quarters[] = new String[]{"2023 Winter", "2023 Spring", "2023 Fall", "2024 Winter", "2024 Spring", "2024 Fall", "2025 Winter", "2025 Spring", "2025 Fall"};
-    	int currQ = 0;
-    	List<String> plan = new ArrayList<String>();
-    	while(leftMand.size() > 0 || sMin > 0) {
-    		//while not met all requirements, iterate through quarters starting from next q
-    		//list up to 5 mandatory courses offered that q
-    		//if less than 5 selected, add 5-(added courses) non-taken electives 
-    		String quarter = quarters[currQ];
-    		int addedCourses = 0;
-    		boolean mandAvail = true;
-    		boolean electAvail = true;
-    		while(addedCourses < 5 && mandAvail) {
-    			//SELECT courses in quarter that are in leftMand array which prereq is satisfied
-    			//increment addedCourses, remove course from leftMand, add to sched
-    			//if no course available, set mandAvail to FALSE
-    			String sql1 = "SELECT cnum, enroll, prereq FROM courses WHERE qyear = " + quarter;
-    			try (Connection conn = this.connect();    			
-    	    		Statement stmt = conn.createStatement();	
-    	    		ResultSet rs  = stmt.executeQuery(sql1)){
-    	    			
-    	    		while(rs.next()) {
-    	    			//get prereq for course, make sure theyve taken to potentially add to plan
-    	    			String prereq = rs.getString("prereq");
-    	    			if(prereq != null) {
-    	    	    		String splitBy = ", ";
-    	    	    		String[] res = prereq.split(splitBy);
-    	    	    		int takenReq = res.length;
-    	    	    		for(int i=0; i<res.length; i++) {    		
-    	    	    			if(taken.contains(res[i])) takenReq--;
-    	    	    		}
-    	    	    		if(takenReq > 0) {
-    	    	        		//prereq not satisfied
-    	    	        		rs.next();
-    	    	        	}
-    	    			}
-    	    			for(int i = 0; i < leftMand.size(); i++) {
-    	    				if(rs.getString("cnum") == leftMand.get(i)) {
-    	    					
-    	    				}
-    	    			}
-    	    			
-    	    		}
-    			} catch (SQLException e) {
-    	            System.out.println(e.getMessage());
-    		}
-    		}
-    		
-    		while(addedCourses < 5 && electAvail && sMin > 0) {
-    			//SELECT courses in quarter that are in sElect not in takenElect
-    			//increment addedCourses, add course to takenElect, decrement sMin, add to sched
-    			//if no elective avaialble, set electAvail to FALSE
-    			
-    			//remove after mandatory courses work
-    			sMin = 0;
-    		}
-    		
-    		currQ++;
-    	}
-    	
+    public void makePlan(String permNumber){
+    	String sql = "SELECT major, taken FROM students WHERE perm = " + permNumber;
+        String taken_courses = "";
+        String[] Courses = null;
+        String Major = "";
+        
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql)){
+              
+                while(rs.next()) { // Note there will only be one result
+                    Major = rs.getString("major");
+                    String s = rs.getString("taken");
+                    taken_courses = s.replace("\"", ""); // Remove the quotes
+                    Courses = taken_courses.split(", ");
+                }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+
+        List<String> completed_courses = new ArrayList<String>();
+        for(int i = 0; i < Courses.length; i++){
+            String[] info = Courses[i].split(": ");
+            if(info.length == 3){
+                if(!info[2].contains("D") && !info[2].contains("F")){
+                    completed_courses.add(info[1].replaceAll("\\s+", ""));
+                }
+            }
+            else{ // info.length == 2
+                if(!info[1].contains("D") && !info[1].contains("F")){
+                    completed_courses.add(info[0].replaceAll("\\s+", ""));
+                }
+            }
+        }
+
+        
+
+        String sql2 = "SELECT mandatory, electives, min FROM majors WHERE mname = \"" + Major + "\"";
+
+        String mcourses = "";
+        String[] mandatory_courses = null;
+        String electives = "";
+        String[] elective_courses = null;
+        int minimum = 0;
+
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql2)){
+
+                while(rs.next()) {
+                    String s = rs.getString("mandatory");
+                    mcourses = s.replace("\"", ""); // Remove the quotes
+                    mandatory_courses = mcourses.split(", ");
+                    
+
+                    s = rs.getString("electives");
+                    electives = s.replace("\"", "");
+                    elective_courses = electives.split(", ");
+                    
+
+                    minimum = rs.getInt("min");
+                }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        List<String> mandatoryCoursesToComplete = new ArrayList<String>();
+        for(int i = 0; i < mandatory_courses.length; i++){
+            if(completed_courses.contains(mandatory_courses[i])){
+                // Do nothing.
+            }
+            else{
+                mandatoryCoursesToComplete.add(mandatory_courses[i]);
+            }
+        }
+
+        List<String> electiveCoursesToComplete = new ArrayList<String>();
+        for(int i = 0; i < elective_courses.length; i++){
+            if(completed_courses.contains(elective_courses[i])){
+                // Do nothing.
+            }
+            else{
+                electiveCoursesToComplete.add(elective_courses[i]);
+            }
+        }
+
+        int counter = minimum;
+        for(int i = 0; i < elective_courses.length; i++){
+            if(completed_courses.contains(elective_courses[i])){
+                counter--;
+            }
+        }
+
+        // completed_courses contains all the courses this person has taken
+        // mandatoryCoursesToComplete contains all the mandatory courses this person must complete
+        // electiveCoursesToComplete contains the possible additional electives that this student can complete
+        // counter contains the number of electives this person must complete
+
+        String quarters[] = new String[]{"2023 Winter", "2023 Spring", "2023 Fall", "2024 Winter", "2024 Spring", "2024 Fall", "2025 Winter", "2025 Spring", "2025 Fall"};
+        int quarterSizes[] = new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0};
+        List<String> CoursesToTake = new ArrayList<String>();
+        List<String> tempTaken = new ArrayList<String>();
+        System.out.println("");
+
+        for(int currQ = 0; currQ < quarters.length; currQ++){ // For each quarter
+            for(int i = 0; i < mandatoryCoursesToComplete.size(); i++){ // For each mandatory course left to complete
+                if(quarterSizes[currQ] <= 5){ // As long as I haven't taken more than 5 courses
+                    String cnum = mandatoryCoursesToComplete.get(i);
+                    // First, I must check if this class is being offered!!!
+                    if(isClassOffered(cnum, quarters[currQ])){
+                        List<String> prereqs = new ArrayList<String>();
+                        prereqs = getPrereqs(cnum, quarters[currQ]);
+                        boolean b = true;
+                        for(int j = 0; j < prereqs.size(); j++){
+                            if(!completed_courses.contains(prereqs.get(j))){
+                                b = false;
+                            }
+                        }
+                        if(b){ // All the prereqs for this course have been taken
+                            CoursesToTake.add(cnum);
+                            tempTaken.add(cnum);
+                            mandatoryCoursesToComplete.remove(i);
+                            quarterSizes[currQ] = quarterSizes[currQ] + 1;
+                        }
+                    }
+                }
+            }
+            for(int i = 0; i < electiveCoursesToComplete.size(); i++){ // Iterate through electives
+                if(quarterSizes[currQ] <= 5){
+                    String cnum = electiveCoursesToComplete.get(i);
+                    // First, I must check if this class is being offered!!!
+                    if(isClassOffered(cnum, quarters[currQ])){
+                        List<String> prereqs = getPrereqs(cnum, quarters[currQ]);
+                        boolean b = true;
+                        for(int j = 0; j < prereqs.size(); j++){
+                            if(!completed_courses.contains(prereqs.get(j))){
+                                b = false;
+                            }
+                        }
+                        if(b && counter > 0){ // All the prereqs for this course have been taken
+                            CoursesToTake.add(electiveCoursesToComplete.get(i));
+                            tempTaken.add(electiveCoursesToComplete.get(i));
+                            electiveCoursesToComplete.remove(i);
+                            quarterSizes[currQ] = quarterSizes[currQ] + 1;
+                            counter--;
+                        }
+                    }
+                }
+            }
+
+            System.out.println("Courses to take in " + quarters[currQ] + ": ");
+            for(int i = 0; i < CoursesToTake.size(); i++){
+                System.out.println(CoursesToTake.get(i));
+                completed_courses.add(CoursesToTake.get(i));
+            }
+            CoursesToTake.clear();
+        }
 
     }
+    
+    public List<String> getPrereqs(String cnum, String qyear){
+        String sql = "SELECT prereq FROM courses WHERE qyear = \"" + qyear + "\" AND cnum = \"" + cnum + "\"";
+        String[] Courses = null;
+        List<String> p = new ArrayList<String>();
+        try (Connection conn = this.connect();              
+            Statement stmt = conn.createStatement();    
+            ResultSet rs  = stmt.executeQuery(sql)){
+                while(rs.next()) {
+                    String s = rs.getString("prereq");
+                    if(s != null){
+                        s = s.replace("\"", ""); // Remove the quotes
+                        Courses = s.split(", ");
+                    }
+                }
+            }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        if(Courses != null){
+            for(int i = 0; i < Courses.length; i++){
+                p.add(Courses[i]);
+            }
+        }
+
+        /*
+        System.out.println("Prereqs for " + cnum + ": ");
+        for(int i = 0; i < p.size(); i++){
+            System.out.println(p.get(i));
+        }
+        */
+
+        return p;
+
+    }
+    
+    public boolean isClassOffered(String cnum, String qyear){
+        String sql = "SELECT enroll FROM courses WHERE qyear = \"" + qyear + "\" AND cnum = \"" + cnum + "\"";
+        boolean b = false;
+
+        try (Connection conn = this.connect();    
+            Statement stmt = conn.createStatement();
+            ResultSet rs  = stmt.executeQuery(sql)){
+                while(rs.next()) {
+                    String s = rs.getString("enroll");
+                    if(s == null){
+                        b = false;
+                    }
+                    else{
+                        b = true;
+                    }
+                }
+            }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return b;
+    }
+
         
     public static void main(String[] args) throws Exception {
     	System.out.println("Starting main application for IVC DBMS...\n\n");   	    	
@@ -1217,7 +1311,7 @@ public class MainApp {
     					app.reqCheck(perm);
     					break;
     				case 6:
-    					System.out.print("\nMake a study plan");
+    					System.out.print("\nCreating a study plan...\n");
     					app.makePlan(perm);
     					break;
     				case 7:
