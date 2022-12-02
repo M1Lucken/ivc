@@ -1033,6 +1033,7 @@ public class MainApp {
         String taken_courses = "";
         String[] Courses = null;
         String Major = "";
+        int finalQ = 0;
         
         try (Connection conn = this.connect();
              Statement stmt  = conn.createStatement();
@@ -1181,13 +1182,15 @@ public class MainApp {
                 }
             }
 
-            System.out.println("Courses to take in " + quarters[currQ] + ": ");
+            if(CoursesToTake.size() > 0) System.out.println("Courses to take in " + quarters[currQ] + ": ");
             for(int i = 0; i < CoursesToTake.size(); i++){
                 System.out.println(CoursesToTake.get(i));
                 completed_courses.add(CoursesToTake.get(i));
+                finalQ = currQ;
             }
             CoursesToTake.clear();
         }
+        System.out.print("Degree requirements satisfied.");
 
     }
     
