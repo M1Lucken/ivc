@@ -799,11 +799,11 @@ public class MainApp {
         String taken_courses = "";
         String[] Courses = null;
         String Major = "";
-        
+       
         try (Connection conn = this.connect();
              Statement stmt  = conn.createStatement();
              ResultSet rs    = stmt.executeQuery(sql)){
-              
+             
                 while(rs.next()) { // Note there will only be one result
                     Major = rs.getString("major");
                     String s = rs.getString("taken");
@@ -828,6 +828,73 @@ public class MainApp {
                 if(!info[1].contains("D") && !info[1].contains("F")){
                     completed_courses.add(info[0].replaceAll("\\s+", ""));
                 }
+            }
+        }
+
+       
+
+        String sql2 = "SELECT mandatory, electives, min FROM majors WHERE mname = \"" + Major + "\"";
+
+        String mcourses = "";
+        String[] mandatory_courses = null;
+        String electives = "";
+        String[] elective_courses = null;
+        int minimum = 0;
+
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql2)){
+
+                while(rs.next()) {
+                    String s = rs.getString("mandatory");
+                    mcourses = s.replace("\"", ""); // Remove the quotes
+                    mandatory_courses = mcourses.split(", ");
+                   
+
+                    s = rs.getString("electives");
+                    electives = s.replace("\"", "");
+                    elective_courses = electives.split(", ");
+                   
+
+                    minimum = rs.getInt("min");
+                }
+             }
+        catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        List<String> mandatoryCoursesToComplete = new ArrayList<String>();
+        for(int i = 0; i < mandatory_courses.length; i++){
+            if(completed_courses.contains(mandatory_courses[i])){
+                // Do nothing.
+            }
+            else{
+                mandatoryCoursesToComplete.add(mandatory_courses[i]);
+            }
+        }
+
+        int counter = minimum;
+        for(int i = 0; i < elective_courses.length; i++){
+            if(completed_courses.contains(elective_courses[i])){
+                counter--;
+            }
+        }
+
+        System.out.println("");
+        if(mandatoryCoursesToComplete.size() == 0 && counter <= 0){
+            System.out.println("Yes");
+        }
+        else{
+            System.out.println("List of mandatory courses to complete:");
+            for(int i = 0; i < mandatoryCoursesToComplete.size(); i++){
+                System.out.println(mandatoryCoursesToComplete.get(i));
+            }
+            System.out.println("Number of electives to complete:");
+            if(counter <= 0){
+                System.out.println(0);
+            }
+            else{
+                System.out.println(counter);
             }
         }
     }
@@ -1146,7 +1213,7 @@ public class MainApp {
     					app.previousQuarterGrades(perm);
     					break;
     				case 5:
-    					System.out.print("\nRequirements check");
+    					System.out.print("\nRequirements check: \n");
     					app.reqCheck(perm);
     					break;
     				case 6:
